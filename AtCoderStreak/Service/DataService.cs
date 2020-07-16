@@ -13,6 +13,7 @@ namespace AtCoderStreak.Service
         void SaveSource(
             string url,
             string lang,
+            int priority,
             byte[] fileBytes);
         IEnumerable<SavedSource> GetSourceByUrl(string url);
         IEnumerable<SavedSource> GetSources(SourceOrder order);
@@ -55,7 +56,7 @@ namespace AtCoderStreak.Service
             using var command = conn.CreateCommand();
             command.CommandText = "CREATE TABLE IF NOT EXISTS SETTING(name TEXT PRIMARY KEY,data text)";
             command.ExecuteNonQuery();
-            command.CommandText = "CREATE TABLE IF NOT EXISTS program(id INTEGER PRIMARY KEY,TaskUrl text, LanguageId text, sourceCode blob)";
+            command.CommandText = "CREATE TABLE IF NOT EXISTS program(id INTEGER PRIMARY KEY,TaskUrl text, LanguageId text, sourceCode blob, priority INTEGER NOT NULL DEFAULT 0)";
             command.ExecuteNonQuery();
 
             return connection = conn;
@@ -90,11 +91,11 @@ namespace AtCoderStreak.Service
             using var command = conn.CreateCommand();
             if (order == SourceOrder.None)
             {
-                commandOrder = "ORDER BY id";
+                commandOrder = "ORDER BY priority desc, id";
             }
             else if (order == SourceOrder.Reverse)
             {
-                commandOrder = "ORDER BY id desc";
+                commandOrder = "ORDER BY priority desc, id desc";
             }
             else
                 throw new InvalidEnumArgumentException(nameof(order), (int)order, typeof(SourceOrder));
@@ -124,6 +125,7 @@ namespace AtCoderStreak.Service
         public void SaveSource(
             string url,
             string lang,
+            int priority,
             byte[] fileBytes)
         {
             if (fileBytes.Length > (512 << 10))
@@ -131,10 +133,10 @@ namespace AtCoderStreak.Service
 
             var conn = Connect();
             using var command = conn.CreateCommand();
-            command.CommandText = "INSERT INTO program(TaskUrl,LanguageId,sourceCode) values(@url, @lang, @source)";
+            command.CommandText = "INSERT INTO program(TaskUrl,LanguageId,sourceCode, priority) values(@url, @lang, @source, @priority)";
             command.Parameters.Add(new SQLiteParameter("@url", url));
             command.Parameters.Add(new SQLiteParameter("@lang", lang));
-
+            command.Parameters.Add(new SQLiteParameter("@priority", priority));
             using var ms = new MemoryStream(512 * 1024);
             using (var gz = new GZipStream(ms, CompressionMode.Compress))
                 gz.Write(fileBytes);

@@ -17,7 +17,7 @@ namespace AtCoderStreak
             File.Delete(file);
             pb.Build().Add("http://example.com", "1001", file)
                 .Should().Be(1);
-            pb.DataMock.Verify(d => d.SaveSource(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<byte[]>()), Times.Never());
+            pb.DataMock.Verify(d => d.SaveSource(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<byte[]>()), Times.Never());
         }
 
         [Fact]
@@ -32,7 +32,7 @@ namespace AtCoderStreak
 
                 pb.Build().Add("http://example.com", "1001", file)
                     .Should().Be(0);
-                pb.DataMock.Verify(d => d.SaveSource("http://example.com", "1001", source));
+                pb.DataMock.Verify(d => d.SaveSource("http://example.com", "1001", 0, source));
             }
             finally
             {

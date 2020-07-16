@@ -103,7 +103,7 @@ namespace AtCoderStreak.Service
                     ExecutionTime=null,
                 },
                 }).Should()
-                .BeEquivalentTo(new ProblemsSubmission[2] {
+                .Equal(new ProblemsSubmission[2] {
                 new ProblemsSubmission
                 {
                     Id=7141771,

@@ -34,24 +34,27 @@ namespace AtCoderStreak.Service
             var expected = new SavedSource[100];
             for (int i = 1; i <= 100; i++)
             {
-                var ss = new SavedSource(i, $"http://example.com/{i}", "1000", MakeSource(i));
+                var ss = new SavedSource(i, $"http://example.com/{i}", "1000", MakeSource(i), i % 5);
                 expected[i - 1] = ss;
-                service.SaveSource(ss.TaskUrl, ss.LanguageId, Encoding.UTF8.GetBytes(ss.SourceCode));
+                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5, Encoding.UTF8.GetBytes(ss.SourceCode));
             }
 
-            service.GetSources(SourceOrder.None).Should().BeEquivalentTo(expected);
-            service.GetSources(SourceOrder.Reverse).Should().BeEquivalentTo(expected.Reverse());
+            service.GetSources(SourceOrder.None).Should()
+                .Equal(expected.OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
+            service.GetSources(SourceOrder.Reverse).Should()
+                .Equal(expected.OrderByDescending(s => s.Priority).ThenByDescending(s => s.Id));
 
             service.DeleteSources(new[] { 1, 2 });
-            service.GetSources(SourceOrder.None).Should().BeEquivalentTo(expected.Skip(2));
+            service.GetSources(SourceOrder.None).Should()
+                .Equal(expected.Skip(2).OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
 
             service
-                .Invoking(s => s.SaveSource("http://example.com", "4000", new byte[(512 << 10) + 1]))
+                .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[(512 << 10) + 1]))
                 .Should()
                 .Throw<ArgumentException>()
                 .WithMessage("source code is too long (Parameter 'fileBytes')");
             service
-                .Invoking(s => s.SaveSource("http://example.com", "4000", new byte[512 << 10]))
+                .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[512 << 10]))
                 .Should()
                 .NotThrow<ArgumentException>();
         }

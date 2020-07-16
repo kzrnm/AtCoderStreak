@@ -131,7 +131,8 @@ namespace AtCoderStreak
         public int Add(
             [Option("u", "target task url")] string url,
             [Option("l", "language ID")] string lang,
-            [Option("f", "source file path")] string file
+            [Option("f", "source file path")] string file,
+            [Option("p", "priority")] int priority = 0
             )
         {
             if (!File.Exists(file))
@@ -143,7 +144,7 @@ namespace AtCoderStreak
             {
                 Context.Logger.LogInformation("exist: {0}", s.ToString());
             }
-            DataService.SaveSource(url, lang, File.ReadAllBytes(file));
+            DataService.SaveSource(url, lang, priority, File.ReadAllBytes(file));
             return 0;
         }
 

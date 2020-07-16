@@ -200,7 +200,7 @@ namespace AtCoderStreak.Model
             var submits = await parser.DeserializeProblemsSubmitAsync(ms);
             submits
                 .Should()
-                .BeEquivalentTo(new ProblemsSubmission[4] {
+                .Equal(new ProblemsSubmission[4] {
                 new ProblemsSubmission
                 {
                     Id=7141771,
