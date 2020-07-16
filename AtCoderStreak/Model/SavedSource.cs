@@ -23,6 +23,8 @@ namespace AtCoderStreak.Model
             this.SourceCode = source;
         }
 
+        public override string ToString() => $"{Id}: {TaskUrl}";
+
         private bool? parseUrlResult;
         private string contest = "";
         private string problem = "";

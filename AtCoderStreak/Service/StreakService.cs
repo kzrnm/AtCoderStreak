@@ -192,10 +192,13 @@ namespace AtCoderStreak.Service
                 if (!res.IsSuccessStatusCode)
                     throw new HttpRequestException($"failed: {req}");
                 var status = await parser.DeserializeSubmissionDetail(await res.Content.ReadAsStreamAsync(), cancellationToken);
-                if (status.IsSuccess)
+                if (!status.Interval.HasValue)
                 {
-                    return (contest, problem, DateTime.Now);
+                    if (status.IsSuccess)
+                        return (contest, problem, DateTime.Now);
+                    return null;
                 }
+
                 await Task.Delay(2000, cancellationToken);
             }
             /*

@@ -139,6 +139,10 @@ namespace AtCoderStreak
                 Context.Logger.LogError("Error:file not found");
                 return 1;
             }
+            foreach (var s in DataService.GetSourceByUrl(url))
+            {
+                Context.Logger.LogInformation("exist: {0}", s.ToString());
+            }
             DataService.SaveSource(url, lang, File.ReadAllBytes(file));
             return 0;
         }
