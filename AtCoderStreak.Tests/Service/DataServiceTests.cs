@@ -34,9 +34,9 @@ namespace AtCoderStreak.Service
             var expected = new SavedSource[100];
             for (int i = 1; i <= 100; i++)
             {
-                var ss = new SavedSource(i, $"http://example.com/{i}", "1000", MakeSource(i), i % 5);
+                var ss = new SavedSource(i, $"http://example.com/{i}", "1000", MakeSource(i), i % 5 - 2);
                 expected[i - 1] = ss;
-                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5, Encoding.UTF8.GetBytes(ss.SourceCode));
+                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5 - 2, Encoding.UTF8.GetBytes(ss.SourceCode));
             }
 
             service.GetSources(SourceOrder.None).Should()
