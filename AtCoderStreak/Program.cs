@@ -142,9 +142,10 @@ namespace AtCoderStreak
             }
             foreach (var s in DataService.GetSourceByUrl(url))
             {
-                Context.Logger.LogInformation("exist: {0}", s.ToString());
+                Context.Logger.LogInformation("[Warning]exist: {0}", s.ToString());
             }
             DataService.SaveSource(url, lang, priority, File.ReadAllBytes(file));
+            Context.Logger.LogInformation($"finish: {url}, {file}, lang:{lang}, priority:{priority}");
             return 0;
         }
 
