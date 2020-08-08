@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -147,6 +148,20 @@ namespace AtCoderStreak
             DataService.SaveSource(url, lang, priority, File.ReadAllBytes(file));
             Context.Logger.LogInformation($"finish: {url}, {file}, lang:{lang}, priority:{priority}");
             return 0;
+        }
+
+        [Command("restore", "restore source code")]
+        public int Restore(
+            [Option("f", "source file path")] string file,
+            [Option("u", "target task url")] string url)
+        {
+            foreach (var s in DataService.GetSourceByUrl(url))
+            {
+                Context.Logger.LogInformation("restore: {0}", s.ToString());
+                File.WriteAllText(file, s.SourceCode, new UTF8Encoding(false));
+                return 0;
+            }
+            return 1;
         }
 
         [Command("latest", "get latest submit")]
