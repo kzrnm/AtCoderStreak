@@ -192,6 +192,39 @@ namespace AtCoderStreak
             return submits.Latest();
         }
 
+        [Command("submitfile", "submit source from file")]
+        public async Task<int> SubmitFile(
+            [Option("f", "source file path")] string file,
+            [Option("u", "target task url")] string url,
+            [Option("l", "language ID")] string lang,
+            [Option("c", "cookie header string or textfile")] string? cookie = null)
+        {
+            cookie = LoadCookie(cookie);
+            if (cookie == null)
+            {
+                Context.Logger.LogError("Error: no session");
+                return 255;
+            }
+            if (!File.Exists(file))
+            {
+                Context.Logger.LogError("Error:file not found");
+                return 1;
+            }
+
+            try
+            {
+                var source = new SavedSource(0, url, lang, File.ReadAllText(file), 0);
+                var submitRes = await StreakService.SubmitSource(source, cookie, Context.CancellationToken);
+                return 0;
+            }
+            catch (HttpRequestException e)
+            {
+                Context.Logger.LogError(e, "Error: submit error");
+                return 2;
+            }
+        }
+
+
         [Command("submit", "submit source")]
         public async Task<int> Submit(
             [Option("o", "db order")] SourceOrder order = SourceOrder.None,
