@@ -15,7 +15,8 @@ namespace AtCoderStreak.Service
             string lang,
             int priority,
             byte[] fileBytes);
-        IEnumerable<SavedSource> GetSourceByUrl(string url);
+        SavedSource? GetSourceById(int id);
+        IEnumerable<SavedSource> GetSourcesByUrl(string url);
         IEnumerable<SavedSource> GetSources(SourceOrder order);
         void DeleteSources(IEnumerable<int> ids);
 
@@ -108,8 +109,18 @@ namespace AtCoderStreak.Service
                 yield return SavedSource.FromReader(reader);
             }
         }
+        public SavedSource? GetSourceById(int id)
+        {
+            var conn = Connect();
+            using var command = conn.CreateCommand();
+            command.CommandText = "SELECT * FROM program WHERE id = @id";
+            command.Parameters.Add(new SQLiteParameter("@id", id));
 
-        public IEnumerable<SavedSource> GetSourceByUrl(string url)
+            using var reader = command.ExecuteReader();
+            return reader.Read() ? SavedSource.FromReader(reader) : null;
+
+        }
+        public IEnumerable<SavedSource> GetSourcesByUrl(string url)
         {
             var conn = Connect();
             using var command = conn.CreateCommand();

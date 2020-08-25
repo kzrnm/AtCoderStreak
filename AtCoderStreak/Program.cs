@@ -141,7 +141,7 @@ namespace AtCoderStreak
                 Context.Logger.LogError("Error:file not found");
                 return 1;
             }
-            foreach (var s in DataService.GetSourceByUrl(url))
+            foreach (var s in DataService.GetSourcesByUrl(url))
             {
                 Context.Logger.LogInformation("[Warning]exist: {0}", s.ToString());
             }
@@ -153,14 +153,31 @@ namespace AtCoderStreak
         [Command("restore", "restore source code")]
         public int Restore(
             [Option("f", "source file path")] string file,
-            [Option("u", "target task url")] string url)
+            [Option(0, "source id")] int id = -1,
+            [Option("u", "target task url")] string? url = null)
         {
-            foreach (var s in DataService.GetSourceByUrl(url))
+            if (string.IsNullOrWhiteSpace(url) == (id < 0))
             {
-                Context.Logger.LogInformation("restore: {0}", s.ToString());
-                File.WriteAllText(file, s.SourceCode, new UTF8Encoding(false));
+                Context.Logger.LogError($"Error: must use either {nameof(url)} or {nameof(id)}");
+                return 255;
+            }
+
+            if (id >= 0 && DataService.GetSourceById(id) is { } source)
+            {
+                Context.Logger.LogInformation("restore: {0}", source.ToString());
+                File.WriteAllText(file, source.SourceCode, new UTF8Encoding(false));
                 return 0;
             }
+
+            if (url != null)
+                foreach (var s in DataService.GetSourcesByUrl(url))
+                {
+                    Context.Logger.LogInformation("restore: {0}", s.ToString());
+                    File.WriteAllText(file, s.SourceCode, new UTF8Encoding(false));
+                    return 0;
+                }
+
+            Context.Logger.LogError($"Error: not found source");
             return 1;
         }
 
@@ -214,7 +231,7 @@ namespace AtCoderStreak
             try
             {
                 var source = new SavedSource(0, url, lang, File.ReadAllText(file), 0);
-                var submitRes = await StreakService.SubmitSource(source, cookie, Context.CancellationToken);
+                var submitRes = await StreakService.SubmitSource(source, cookie, false, Context.CancellationToken);
                 return 0;
             }
             catch (HttpRequestException e)
@@ -278,7 +295,7 @@ namespace AtCoderStreak
                 {
                     var (contest, problem, _) = source.SubmitInfo();
                     if (!accepted.Contains((contest, problem)))
-                        submitRes = await StreakService.SubmitSource(source, cookie, Context.CancellationToken);
+                        submitRes = await StreakService.SubmitSource(source, cookie, true, Context.CancellationToken);
                 }
                 usedIds.Add(source.Id);
                 if (submitRes.HasValue && submitRes.Value.time >= DateTime.SpecifyKind(DateTime.UtcNow.AddHours(9).Date, DateTimeKind.Unspecified))

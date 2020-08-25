@@ -9,6 +9,28 @@ namespace AtCoderStreak.Service
 {
     public class DataServiceTests
     {
+        const string SourceCode = @"class P
+{
+    static void Main(string[] args)
+    {
+        System.Console.WriteLine(string.Join(' ', args));
+    }
+}";
+        static string MakeSource(int i) => SourceCode.Replace("' '", $"\"{i}\"");
+
+        IDataService service = new DataService(":memory:");
+        SavedSource[] saved = new SavedSource[100];
+
+        public DataServiceTests()
+        {
+            for (int i = 1; i <= 100; i++)
+            {
+                var ss = new SavedSource(i, $"http://example.com/{i / 2}", "1000", MakeSource(i), i % 5 - 2);
+                saved[i - 1] = ss;
+                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5 - 2, Encoding.UTF8.GetBytes(ss.SourceCode));
+            }
+        }
+
         [Fact]
         public void TestSession()
         {
@@ -22,31 +44,14 @@ namespace AtCoderStreak.Service
         [Fact]
         public void TestSource()
         {
-            const string source = @"class P
-{
-    static void Main(string[] args)
-    {
-        System.Console.WriteLine(string.Join(' ', args));
-    }
-}";
-            static string MakeSource(int i) => source.Replace("' '", $"\"{i}\"");
-            IDataService service = new DataService(":memory:");
-            var expected = new SavedSource[100];
-            for (int i = 1; i <= 100; i++)
-            {
-                var ss = new SavedSource(i, $"http://example.com/{i}", "1000", MakeSource(i), i % 5 - 2);
-                expected[i - 1] = ss;
-                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5 - 2, Encoding.UTF8.GetBytes(ss.SourceCode));
-            }
-
             service.GetSources(SourceOrder.None).Should()
-                .Equal(expected.OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
+                .Equal(saved.OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
             service.GetSources(SourceOrder.Reverse).Should()
-                .Equal(expected.OrderByDescending(s => s.Priority).ThenByDescending(s => s.Id));
+                .Equal(saved.OrderByDescending(s => s.Priority).ThenByDescending(s => s.Id));
 
             service.DeleteSources(new[] { 1, 2 });
             service.GetSources(SourceOrder.None).Should()
-                .Equal(expected.Skip(2).OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
+                .Equal(saved.Skip(2).OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
 
             service
                 .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[(512 << 10) + 1]))
@@ -57,6 +62,21 @@ namespace AtCoderStreak.Service
                 .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[512 << 10]))
                 .Should()
                 .NotThrow<ArgumentException>();
+        }
+
+        [Fact]
+        public void TestSourcesByUrl()
+        {
+            service.GetSourcesByUrl("http://example.com/2").Should()
+                .Equal(new[] { saved[3], saved[4] });
+        }
+
+        [Fact]
+        public void TestSourceById()
+        {
+            service.GetSourceById(1).Should().Be(saved[0]);
+            service.GetSourceById(2).Should().Be(saved[1]);
+            service.GetSourceById(101).Should().BeNull();
         }
     }
 }

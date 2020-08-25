@@ -182,7 +182,7 @@ namespace AtCoderStreak
             pb.StreakMock
                 .Verify(s => s.GetACSubmissionsAsync("dumcookie", It.IsAny<CancellationToken>()), Times.Once());
             pb.StreakMock
-                .Verify(s => s.SubmitSource(It.IsAny<SavedSource>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+                .Verify(s => s.SubmitSource(It.IsAny<SavedSource>(), It.IsAny<string>(), true, It.IsAny<CancellationToken>()), Times.Never());
             pb.DataMock
                 .Verify(d => d.DeleteSources(It.Is<IEnumerable<int>>(input => input.SequenceEqual(new[] { 1, 2, 3 }))), Times.Once());
         }
@@ -221,7 +221,7 @@ namespace AtCoderStreak
                     new SavedSource(4,"http://example.com/contests/ex4/tasks/ex4_2", "4040", @"echo 4",0),
                 });
             pb.StreakMock
-                .Setup(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Setup(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(("ex3", "ex3_2", new DateTime(2020, 3, 2, 4, 5, 0)));
 
             var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "dumcookie");
@@ -232,13 +232,13 @@ namespace AtCoderStreak
 
 
             pb.StreakMock
-                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 1), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once());
+                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 1), It.IsAny<string>(), true, It.IsAny<CancellationToken>()), Times.Once());
             pb.StreakMock
-                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 2), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 2), It.IsAny<string>(), true, It.IsAny<CancellationToken>()), Times.Never());
             pb.StreakMock
-                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once());
+                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), true, It.IsAny<CancellationToken>()), Times.Once());
             pb.StreakMock
-                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 4), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
+                .Verify(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 4), It.IsAny<string>(), true, It.IsAny<CancellationToken>()), Times.Never());
 
         }
     }

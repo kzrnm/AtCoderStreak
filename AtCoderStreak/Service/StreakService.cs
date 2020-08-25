@@ -21,7 +21,7 @@ namespace AtCoderStreak.Service
         Task<ProblemsSubmission[]> GetSubmissionsAsync(string cookie, CancellationToken cancellationToken = default);
         Task<ProblemsSubmission[]> GetACSubmissionsAsync(string cookie, CancellationToken cancellationToken = default);
 
-        Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, CancellationToken cancellationToken = default);
+        Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default);
     }
     public class StreakService : IStreakService
     {
@@ -117,7 +117,7 @@ namespace AtCoderStreak.Service
         }
         #endregion
 
-        public async Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, CancellationToken cancellationToken = default)
+        public async Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default)
         {
             if (!source.TaskUrl.StartsWith("https://atcoder.jp")) return null;
             if (!source.CanParse()) return null;
@@ -178,13 +178,13 @@ namespace AtCoderStreak.Service
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
             var subId = await parser.ParseFirstSubmissionId(await res.Content.ReadAsStreamAsync(), cancellationToken);
-            if (subId == null)
-                return null;
+            if (subId == null) return null;
 
+            if (!waitResult) return null;
             // 結果が出るまで待機
             var statusUrl = new Uri(baseUrl + $"/submissions/{subId}/status/json");
             var startTime = DateTime.Now;
-            while (DateTime.Now - startTime < TimeSpan.FromSeconds(90))
+            while (DateTime.Now - startTime < TimeSpan.FromSeconds(120))
             {
                 req = new HttpRequestMessage(HttpMethod.Get, statusUrl);
                 req.Headers.Add("Cookie", cookie);
@@ -201,19 +201,6 @@ namespace AtCoderStreak.Service
 
                 await Task.Delay(2000, cancellationToken);
             }
-            /*
-    url = target + f'/submissions/{subs[0]}/status/json'
-    for i in range(100):
-        res = requests.get(url, headers=headers)
-        if not res.ok:
-            raise HttpException()
-        j = res.json()
-        if 'Interval' in j:
-            time.sleep(6)
-        else:
-            return bool(BeautifulSoup(j['Html']).find(class_='label-success'))
-    return False
-             */
 
             return null;
         }
