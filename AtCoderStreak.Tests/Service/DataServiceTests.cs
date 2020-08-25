@@ -18,8 +18,8 @@ namespace AtCoderStreak.Service
 }";
         static string MakeSource(int i) => SourceCode.Replace("' '", $"\"{i}\"");
 
-        IDataService service = new DataService(":memory:");
-        SavedSource[] saved = new SavedSource[100];
+        readonly IDataService service = new DataService(":memory:");
+        readonly SavedSource[] saved = new SavedSource[100];
 
         public DataServiceTests()
         {

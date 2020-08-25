@@ -14,19 +14,30 @@ namespace AtCoderStreak
         readonly ProgramBuilder pb = new ProgramBuilder();
 
         [Fact]
+        public async void TestLatest_NoCookie()
+        {
+            var p = pb.Build();
+            var ret = await p.Latest();
+            ret.Should().Be(255);
+        }
+
+        [Fact]
         public async void TestLatest_NoSubmit()
         {
+            pb.SetupCookie();
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<ProblemsSubmission>());
 
-            var ret = await pb.Build().LatestInternal("");
-            ret.Should().BeNull();
+            var p = pb.Build();
+            (await p.LatestInternal("")).Should().BeNull();
+            (await p.Latest()).Should().Be(1);
         }
 
         [Fact]
         public async void TestLatest_Success()
         {
+            pb.SetupCookie();
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] {
@@ -57,7 +68,8 @@ namespace AtCoderStreak
                     DateTime=new DateTime(2020,1,1,15,4,13,0),
                 },
                 });
-            var ret = await pb.Build().LatestInternal("");
+            var p = pb.Build();
+            var ret = await p.LatestInternal("");
             ret!.DateTime.Kind.Should().Be(DateTimeKind.Unspecified);
             ret.Should()
                 .Be(new ProblemsSubmission
@@ -73,6 +85,7 @@ namespace AtCoderStreak
                     Result = "AC",
                     DateTime = new DateTime(2020, 1, 1, 15, 4, 13, 0),
                 });
+            (await p.Latest()).Should().Be(0);
         }
     }
 }

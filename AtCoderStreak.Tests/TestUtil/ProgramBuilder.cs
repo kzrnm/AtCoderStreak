@@ -12,10 +12,7 @@ namespace AtCoderStreak.TestUtil
         public Mock<IDataService> DataMock { set; get; } = new Mock<IDataService>();
         public Mock<IStreakService> StreakMock { set; get; } = new Mock<IStreakService>();
         public Logger Logger { get; } = new Logger();
-        public ProgramBuilder()
-        {
-            DataMock.Setup(d => d.GetSession()).Returns(cookie);
-        }
+        public void SetupCookie() => DataMock.Setup(d => d.GetSession()).Returns(cookie);
 
         public Program Build()
         {

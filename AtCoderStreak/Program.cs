@@ -156,29 +156,39 @@ namespace AtCoderStreak
             [Option(0, "source id")] int id = -1,
             [Option("u", "target task url")] string? url = null)
         {
-            if (string.IsNullOrWhiteSpace(url) == (id < 0))
+            SavedSource? source;
+            try
             {
-                Context.Logger.LogError($"Error: must use either {nameof(url)} or {nameof(id)}");
-                return 255;
+                source = RestoreInternal(id, url);
             }
-
-            if (id >= 0 && DataService.GetSourceById(id) is { } source)
+            catch (ArgumentException e)
+            {
+                Context.Logger.LogError(e.Message);
+                return 128;
+            }
+            if (source != null)
             {
                 Context.Logger.LogInformation("restore: {0}", source.ToString());
                 File.WriteAllText(file, source.SourceCode, new UTF8Encoding(false));
                 return 0;
             }
+            else
+            {
+                Context.Logger.LogError($"Error: not found source");
+                return 1;
+            }
+        }
+        internal SavedSource? RestoreInternal(int id = -1, string? url = null)
+        {
+            if (string.IsNullOrWhiteSpace(url) == (id < 0))
+                throw new ArgumentException($"Error: must use either {nameof(url)} or {nameof(id)}");
 
-            if (url != null)
-                foreach (var s in DataService.GetSourcesByUrl(url))
-                {
-                    Context.Logger.LogInformation("restore: {0}", s.ToString());
-                    File.WriteAllText(file, s.SourceCode, new UTF8Encoding(false));
-                    return 0;
-                }
+            if (!string.IsNullOrWhiteSpace(url))
+                return DataService.GetSourcesByUrl(url).FirstOrDefault();
+            else if (id >= 0)
+                return DataService.GetSourceById(id);
 
-            Context.Logger.LogError($"Error: not found source");
-            return 1;
+            throw new InvalidOperationException("never");
         }
 
         [Command("latest", "get latest submit")]
@@ -216,21 +226,25 @@ namespace AtCoderStreak
             [Option("l", "language ID")] string lang,
             [Option("c", "cookie header string or textfile")] string? cookie = null)
         {
+            if (!File.Exists(file))
+            {
+                Context.Logger.LogError("Error: file not found");
+                return 1;
+            }
+            return await SubmitFileInternal(File.ReadAllText(file), url, lang, cookie);
+        }
+
+        internal async Task<int> SubmitFileInternal(string sourceCode, string url, string lang, string? cookie = null)
+        {
             cookie = LoadCookie(cookie);
             if (cookie == null)
             {
                 Context.Logger.LogError("Error: no session");
                 return 255;
             }
-            if (!File.Exists(file))
-            {
-                Context.Logger.LogError("Error:file not found");
-                return 1;
-            }
-
             try
             {
-                var source = new SavedSource(0, url, lang, File.ReadAllText(file), 0);
+                var source = new SavedSource(0, url, lang, sourceCode, 0);
                 var submitRes = await StreakService.SubmitSource(source, cookie, false, Context.CancellationToken);
                 return 0;
             }
@@ -240,7 +254,6 @@ namespace AtCoderStreak
                 return 2;
             }
         }
-
 
         [Command("submit", "submit source")]
         public async Task<int> Submit(
