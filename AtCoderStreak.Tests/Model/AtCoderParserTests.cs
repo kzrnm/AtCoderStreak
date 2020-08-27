@@ -94,7 +94,7 @@ namespace AtCoderStreak.Model
 </body></html>"
                 },
                 {
-                    new DateTime(2018,6,1,19,49,31,DateTimeKind.Local),
+                    new DateTime(2018,6,1,19,49,31,DateTimeKind.Unspecified),
                     @"
 <html><body>
 <div class=""panel-submission""><div><span><span class=""fixtime-second"">2020-04-11 09:19:51+0900</span></span></div></div>
