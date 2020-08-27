@@ -158,9 +158,9 @@ namespace AtCoderStreak.Service
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
             var oldestTime = await parser.ParseOldestSubmissionTime(await res.Content.ReadAsStreamAsync(), cancellationToken);
-            if (oldestTime.HasValue)
+            if (oldestTime is { } time)
             {
-                return (contest, problem, oldestTime.Value);
+                return (contest, problem, time.DateTime);
             }
 
             // 最新の提出を取得

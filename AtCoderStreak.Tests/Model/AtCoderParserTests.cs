@@ -85,7 +85,7 @@ namespace AtCoderStreak.Model
 
 
         public static TheoryData SourceTestParseOldestSubmissionTime
-            = new TheoryData<DateTime?, string>
+            = new TheoryData<DateTimeOffset?, string>
             {
                 {
                     null,
@@ -94,7 +94,7 @@ namespace AtCoderStreak.Model
 </body></html>"
                 },
                 {
-                    new DateTime(2018,6,1,19,49,31,DateTimeKind.Unspecified),
+                    new DateTimeOffset(2018,6,1,19,49,31,TimeSpan.FromHours(9)),
                     @"
 <html><body>
 <div class=""panel-submission""><div><span><span class=""fixtime-second"">2020-04-11 09:19:51+0900</span></span></div></div>
@@ -108,7 +108,7 @@ namespace AtCoderStreak.Model
             };
         [Theory]
         [MemberData(nameof(SourceTestParseOldestSubmissionTime))]
-        public async Task TestParseOldestSubmissionTime(DateTime? expected, string input)
+        public async Task TestParseOldestSubmissionTime(DateTimeOffset? expected, string input)
         {
             using var ms = Util.StringToStream(input);
             var ret = await parser.ParseOldestSubmissionTime(ms);

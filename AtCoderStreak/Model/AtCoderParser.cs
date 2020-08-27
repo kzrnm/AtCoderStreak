@@ -51,14 +51,14 @@ namespace AtCoderStreak.Model
             var document = await parser.ParseDocumentAsync(stream, cancellationToken);
             return document.GetElementsByName("csrf_token").OfType<IHtmlInputElement>().FirstOrDefault()?.Value;
         }
-        public async Task<DateTime?> ParseOldestSubmissionTime(Stream stream, CancellationToken cancellationToken = default)
+        public async Task<DateTimeOffset?> ParseOldestSubmissionTime(Stream stream, CancellationToken cancellationToken = default)
         {
             var parser = new HtmlParser();
             var document = await parser.ParseDocumentAsync(stream, cancellationToken);
             return document
                 .GetElementsByClassName("panel-submission")
                 .SelectMany(el => el.GetElementsByClassName("fixtime-second"))
-                .Select(el => (DateTime?)DateTime.Parse(el.TextContent))
+                .Select(el => (DateTimeOffset?)DateTimeOffset.Parse(el.TextContent))
                 .DefaultIfEmpty()
                 .Min();
         }
