@@ -287,6 +287,9 @@ namespace AtCoderStreak
                 return 2;
             }
         }
+        internal static bool IsToday(DateTime dateTime)
+            => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified), TimeSpan.FromHours(9)).Date >= DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date;
+
         internal async Task<(string contest, string problem, DateTime time)?> SubmitInternal(SourceOrder order, bool force, string cookie)
         {
             ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
@@ -294,7 +297,7 @@ namespace AtCoderStreak
             {
                 submits = await StreakService.GetACSubmissionsAsync(cookie, Context.CancellationToken);
                 var latest = submits.Latest();
-                if (latest != null && latest.DateTime >= DateTime.SpecifyKind(DateTime.UtcNow.AddHours(9).Date, DateTimeKind.Unspecified))
+                if (latest != null && IsToday(latest.DateTime))
                     return (latest.ContestId!, latest.ProblemId!, latest.DateTime);
             }
 

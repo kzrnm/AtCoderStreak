@@ -16,6 +16,31 @@ namespace AtCoderStreak
     {
         readonly ProgramBuilder pb = new ProgramBuilder();
 
+
+        public static TheoryData TestIsToday_Data
+            = new TheoryData<bool, DateTime>
+            {
+                {
+                    true,
+                    DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Local).Date.AddDays(1)
+                },
+                {
+                    false,
+                    DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified).AddDays(-1)
+                },
+                {
+                    false,
+                    DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified).Date.AddMinutes(-1)
+                },
+            };
+
+        [Theory()]
+        [MemberData(nameof(TestIsToday_Data))]
+        public void TestIsToday(bool expect, DateTime date)
+        {
+            Program.IsToday(date).Should().Be(expect);
+        }
+
         [Fact]
         public async void TestSubmit_Latest_Exist()
         {
@@ -30,7 +55,7 @@ namespace AtCoderStreak
                 ContestId = "contest02",
                 ProblemId = "contest02_a",
                 Result = "AC",
-                DateTime = DateTime.Now,
+                DateTime = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date.AddDays(1).AddSeconds(-1),
             };
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
