@@ -169,7 +169,7 @@ namespace AtCoderStreak
             if (source != null)
             {
                 Context.Logger.LogInformation("restore: {0}", source.ToString());
-                File.WriteAllText(file, source.SourceCode, new UTF8Encoding(false));
+                File.WriteAllText(file, source.SourceCode, new UTF8Encoding(tr));
                 return 0;
             }
             else
