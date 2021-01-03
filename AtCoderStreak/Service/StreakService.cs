@@ -117,7 +117,8 @@ namespace AtCoderStreak.Service
         }
         #endregion
 
-        public async Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default)
+        public async Task<(string contest, string problem, DateTime time)?> 
+            SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default)
         {
             if (!source.TaskUrl.StartsWith("https://atcoder.jp")) return null;
             if (!source.CanParse()) return null;

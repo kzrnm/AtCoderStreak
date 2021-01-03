@@ -259,6 +259,7 @@ namespace AtCoderStreak
         public async Task<int> Submit(
             [Option("o", "db order")] SourceOrder order = SourceOrder.None,
             [Option("f", "submit force")] bool force = false,
+            [Option("p", "parallel count. if 0, streak mode")] int paralell = 0,
             [Option("c", "cookie header string or textfile")] string? cookie = null)
         {
             cookie = LoadCookie(cookie);
@@ -267,6 +268,9 @@ namespace AtCoderStreak
                 Context.Logger.LogError("Error: no session");
                 return 255;
             }
+
+            if (paralell > 0)
+                return await SubmitParallel(order, paralell, cookie);
 
             try
             {
@@ -287,10 +291,30 @@ namespace AtCoderStreak
                 return 2;
             }
         }
+
+        internal async Task<int> SubmitParallel(SourceOrder order, int paralell, string cookie)
+        {
+            var res = await SubmitInternalParallel(order, cookie, paralell);
+            foreach (var (source, submitSuccess) in res)
+            {
+                if (submitSuccess)
+                {
+                    Context.Logger.LogInformation("Submit: {0}", source.TaskUrl);
+                }
+                else
+                {
+                    Context.Logger.LogError("Failed to submit: {0}", source.TaskUrl);
+                }
+            }
+            return 0;
+        }
+
+
         internal static bool IsToday(DateTime dateTime)
             => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified), TimeSpan.FromHours(9)).Date >= DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date;
 
-        internal async Task<(string contest, string problem, DateTime time)?> SubmitInternal(SourceOrder order, bool force, string cookie)
+        internal async Task<(string contest, string problem, DateTime time)?>
+            SubmitInternal(SourceOrder order, bool force, string cookie)
         {
             ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
             if (!force)
@@ -321,5 +345,41 @@ namespace AtCoderStreak
             DataService.DeleteSources(usedIds);
             return submitRes;
         }
+
+        internal async Task<(SavedSource source, bool submitSuccess)[]>
+            SubmitInternalParallel(SourceOrder order, string cookie, int paralellNum)
+        {
+            ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
+            var tasks = new List<(SavedSource source, Task<(string contest, string problem, DateTime time)?> submitTask)>();
+            foreach (var source in DataService.GetSources(order))
+            {
+                if (source.CanParse())
+                {
+                    if (--paralellNum < 0)
+                        break;
+                    tasks.Add((source, StreakService.SubmitSource(source, cookie, false, Context.CancellationToken)));
+                }
+            }
+            await Task.WhenAll(tasks.Select(t => t.submitTask));
+
+            var usedIds = new List<int>();
+            var res = new List<(SavedSource source, bool submitSuccess)>();
+            foreach (var (source, task) in tasks)
+            {
+                if (task.IsCompletedSuccessfully)
+                {
+                    usedIds.Add(source.Id);
+                    res.Add((source, true));
+                }
+                else
+                {
+                    res.Add((source, false));
+                }
+            }
+
+            DataService.DeleteSources(usedIds);
+            return res.ToArray();
+        }
+
     }
 }
