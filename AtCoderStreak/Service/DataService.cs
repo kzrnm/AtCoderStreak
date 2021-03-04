@@ -100,9 +100,7 @@ namespace AtCoderStreak.Service
             }
             else
                 throw new InvalidEnumArgumentException(nameof(order), (int)order, typeof(SourceOrder));
-#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
             command.CommandText = $"{defaultCommand} {commandOrder}";
-#pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
@@ -169,7 +167,13 @@ namespace AtCoderStreak.Service
             }
             tr.Commit();
         }
-        public void Dispose() => this.connection?.Dispose();
+
+        public void Dispose()
+        {
+            this.connection?.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
 #pragma warning restore
     }
 

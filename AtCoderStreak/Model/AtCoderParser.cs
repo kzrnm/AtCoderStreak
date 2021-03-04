@@ -23,16 +23,16 @@ namespace AtCoderStreak.Model
             var rs = FilterREVEL_SESSION(cookie.Split(';'));
             if (rs == null)
                 throw new ArgumentException("invalid cookie", nameof(cookie));
-            var prs = HttpUtility.UrlDecode(rs.Substring("REVEL_SESSION=".Length));
+            var prs = HttpUtility.UrlDecode(rs["REVEL_SESSION=".Length..]);
             var ra = prs.Split('\0', StringSplitOptions.RemoveEmptyEntries);
 
             try
             {
                 var csrfToken = ra.Where(s => s.StartsWith("csrf_token:"))
-                    .Select(s => s.Substring("csrf_token:".Length))
+                    .Select(s => s["csrf_token:".Length..])
                     .First();
                 var userName = ra.Where(s => s.StartsWith("UserScreenName:"))
-                    .Select(s => s.Substring("UserScreenName:".Length))
+                    .Select(s => s["UserScreenName:".Length..])
                     .First();
                 return (csrfToken, userName);
             }
@@ -80,7 +80,7 @@ namespace AtCoderStreak.Model
                 Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
             };
             var status = await JsonSerializer.DeserializeAsync<SubmissionStatus>(stream, opt, cancellationToken);
-
+            if (status is null) throw new InvalidDataException();
             var parser = new HtmlParser();
             var document = await parser.ParseDocumentAsync(status.Html, cancellationToken);
             status.IsSuccess = document.GetElementsByClassName("label-success").Any();
@@ -88,7 +88,7 @@ namespace AtCoderStreak.Model
         }
 
 
-        public ValueTask<ProblemsSubmission[]> DeserializeProblemsSubmitAsync(Stream stream, CancellationToken cancellationToken = default)
+        public ValueTask<ProblemsSubmission[]?> DeserializeProblemsSubmitAsync(Stream stream, CancellationToken cancellationToken = default)
         {
             var opt = new JsonSerializerOptions
             {

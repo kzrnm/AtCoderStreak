@@ -10,7 +10,7 @@ namespace AtCoderStreak.Model
 {
     public class AtCoderParserTests
     {
-        private readonly AtCoderParser parser = new AtCoderParser();
+        private readonly AtCoderParser parser = new();
 
         [Fact]
         public void TestParseCookie_Failed()
@@ -43,8 +43,8 @@ namespace AtCoderStreak.Model
                 .Be(("zzzzzzxxxxxxxxxyyyyyyyyy=", "usernam"));
         }
 
-        public static TheoryData SourceTestFilterREVEL_SESSION
-            = new TheoryData<string?, IEnumerable<string>>
+        public static readonly TheoryData SourceTestFilterREVEL_SESSION
+            = new TheoryData<string, IEnumerable<string>>
             {
                 {
                     null,
@@ -57,13 +57,13 @@ namespace AtCoderStreak.Model
             };
         [Theory]
         [MemberData(nameof(SourceTestFilterREVEL_SESSION))]
-        public void TestFilterREVEL_SESSION(string? expected, IEnumerable<string> input)
+        public void TestFilterREVEL_SESSION(string expected, IEnumerable<string> input)
         {
             parser.FilterREVEL_SESSION(input).Should().Be(expected);
         }
 
-        public static TheoryData SourceTestParseLoginCSRFToken
-            = new TheoryData<string?, string>
+        public static readonly TheoryData SourceTestParseLoginCSRFToken
+            = new TheoryData<string, string>
             {
                 {
                     null,
@@ -76,7 +76,7 @@ namespace AtCoderStreak.Model
             };
         [Theory]
         [MemberData(nameof(SourceTestParseLoginCSRFToken))]
-        public async Task TestParseLoginCSRFToken(string? expected, string input)
+        public async Task TestParseLoginCSRFToken(string expected, string input)
         {
             using var ms = Util.StringToStream(input);
             var ret = await parser.ParseLoginCSRFToken(ms);
@@ -84,7 +84,7 @@ namespace AtCoderStreak.Model
         }
 
 
-        public static TheoryData SourceTestParseOldestSubmissionTime
+        public static readonly TheoryData SourceTestParseOldestSubmissionTime
             = new TheoryData<DateTimeOffset?, string>
             {
                 {
@@ -115,8 +115,8 @@ namespace AtCoderStreak.Model
             ret.Should().Be(expected);
         }
 
-        public static TheoryData SourceTestParseLatestSubmissionId
-            = new TheoryData<string?, string>
+        public static readonly TheoryData SourceTestParseLatestSubmissionId
+            = new TheoryData<string, string>
             {
                 {
                     null,
@@ -146,14 +146,14 @@ namespace AtCoderStreak.Model
             };
         [Theory]
         [MemberData(nameof(SourceTestParseLatestSubmissionId))]
-        public async Task TestParseLatestSubmissionId(string? expected, string input)
+        public async Task TestParseLatestSubmissionId(string expected, string input)
         {
             using var ms = Util.StringToStream(input);
             var ret = await parser.ParseFirstSubmissionId(ms);
             ret.Should().Be(expected);
         }
 
-        public static TheoryData SourceTestDeserializeSubmissionDetail
+        public static readonly TheoryData SourceTestDeserializeSubmissionDetail
             = new TheoryData<SubmissionStatus, string>
             {
                 {

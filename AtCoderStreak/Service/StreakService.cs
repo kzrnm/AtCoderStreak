@@ -25,7 +25,7 @@ namespace AtCoderStreak.Service
     }
     public class StreakService : IStreakService
     {
-        private readonly AtCoderParser parser = new AtCoderParser();
+        private readonly AtCoderParser parser = new();
         private readonly IHttpClientFactory clientFactory;
         public StreakService(IHttpClientFactory clientFactory)
         {
@@ -43,12 +43,14 @@ namespace AtCoderStreak.Service
             var client = clientFactory.CreateClient("disallowRedirect");
 
             var res = await client.PostAsync(LoginUrl,
+#pragma warning disable CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
                 new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     {"username", username },
                     {"password", password },
                     {"csrf_token", csrfToken },
                 }),
+#pragma warning restore CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
                 cancellationToken);
 
 
@@ -67,7 +69,7 @@ namespace AtCoderStreak.Service
         {
             var client = clientFactory.CreateClient("allowRedirect");
             var res = await client.GetAsync(LoginUrl, cancellationToken);
-            return await parser.ParseLoginCSRFToken(await res.Content.ReadAsStreamAsync(), cancellationToken);
+            return await parser.ParseLoginCSRFToken(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
         }
         #endregion
 
@@ -84,9 +86,11 @@ namespace AtCoderStreak.Service
             }.Uri;
             var client = clientFactory.CreateClient("allowRedirect");
             var res = await client.GetAsync(uri, cancellationToken);
-            using var jsonStream = await res.Content.ReadAsStreamAsync();
+            using var jsonStream = await res.Content.ReadAsStreamAsync(cancellationToken);
 
-            return await parser.DeserializeProblemsSubmitAsync(jsonStream, cancellationToken);
+            var submissions = await parser.DeserializeProblemsSubmitAsync(jsonStream, cancellationToken);
+            if (submissions is null) throw new InvalidDataException();
+            return submissions;
         }
 
         public async Task<ProblemsSubmission[]> GetACSubmissionsAsync(string cookie, CancellationToken cancellationToken = default)
@@ -132,6 +136,7 @@ namespace AtCoderStreak.Service
             NameValueCollection query;
             req = new HttpRequestMessage(HttpMethod.Post, baseUrl + "/submit");
             req.Headers.Add("Cookie", cookie);
+#pragma warning disable CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
             req.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 {"data.TaskScreenName", problem },
@@ -139,6 +144,7 @@ namespace AtCoderStreak.Service
                 {"sourceCode", source.SourceCode},
                 {"csrf_token", csrfToken},
             });
+#pragma warning restore CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
 
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
@@ -158,7 +164,7 @@ namespace AtCoderStreak.Service
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
-            var oldestTime = await parser.ParseOldestSubmissionTime(await res.Content.ReadAsStreamAsync(), cancellationToken);
+            var oldestTime = await parser.ParseOldestSubmissionTime(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
             if (oldestTime is { } time)
             {
                 return (contest, problem, time.DateTime);
@@ -178,7 +184,7 @@ namespace AtCoderStreak.Service
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
-            var subId = await parser.ParseFirstSubmissionId(await res.Content.ReadAsStreamAsync(), cancellationToken);
+            var subId = await parser.ParseFirstSubmissionId(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
             if (subId == null) return null;
 
             if (!waitResult) return null;
@@ -192,7 +198,7 @@ namespace AtCoderStreak.Service
                 res = await client.SendAsync(req, cancellationToken);
                 if (!res.IsSuccessStatusCode)
                     throw new HttpRequestException($"failed: {req}");
-                var status = await parser.DeserializeSubmissionDetail(await res.Content.ReadAsStreamAsync(), cancellationToken);
+                var status = await parser.DeserializeSubmissionDetail(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
                 if (!status.Interval.HasValue)
                 {
                     if (status.IsSuccess)
