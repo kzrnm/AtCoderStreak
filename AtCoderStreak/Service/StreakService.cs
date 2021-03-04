@@ -1,14 +1,10 @@
 ﻿using AtCoderStreak.Model;
-using AtCoderStreak.Model.Serialization;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Encodings.Web;
-using System.Text.Json;
-using System.Text.Unicode;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -86,6 +82,8 @@ namespace AtCoderStreak.Service
             }.Uri;
             var client = clientFactory.CreateClient("allowRedirect");
             var res = await client.GetAsync(uri, cancellationToken);
+            if (!res.IsSuccessStatusCode)
+                throw new HttpRequestException($"failed: {uri}");
             using var jsonStream = await res.Content.ReadAsStreamAsync(cancellationToken);
 
             var submissions = await parser.DeserializeProblemsSubmitAsync(jsonStream, cancellationToken);
@@ -121,7 +119,7 @@ namespace AtCoderStreak.Service
         }
         #endregion
 
-        public async Task<(string contest, string problem, DateTime time)?> 
+        public async Task<(string contest, string problem, DateTime time)?>
             SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default)
         {
             if (!source.TaskUrl.StartsWith("https://atcoder.jp")) return null;
@@ -149,6 +147,9 @@ namespace AtCoderStreak.Service
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
+            var resContent = await res.Content.ReadAsStringAsync(cancellationToken);
+            if (resContent.Contains("href=\"/reset_password\""))
+                throw new HttpRequestException($"Require login: {req}");
 
             // 最古のACを取得
             query = HttpUtility.ParseQueryString("");
@@ -164,6 +165,9 @@ namespace AtCoderStreak.Service
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
                 throw new HttpRequestException($"failed: {req}");
+            resContent = await res.Content.ReadAsStringAsync(cancellationToken);
+            if (resContent.Contains("href=\"/reset_password\""))
+                throw new HttpRequestException($"Require login: {req}");
             var oldestTime = await parser.ParseOldestSubmissionTime(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
             if (oldestTime is { } time)
             {
@@ -198,6 +202,9 @@ namespace AtCoderStreak.Service
                 res = await client.SendAsync(req, cancellationToken);
                 if (!res.IsSuccessStatusCode)
                     throw new HttpRequestException($"failed: {req}");
+                resContent = await res.Content.ReadAsStringAsync(cancellationToken);
+                if (resContent.Contains("href=\"/reset_password\""))
+                    throw new HttpRequestException($"Require login: {req}");
                 var status = await parser.DeserializeSubmissionDetail(await res.Content.ReadAsStreamAsync(cancellationToken), cancellationToken);
                 if (!status.Interval.HasValue)
                 {
