@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 
 namespace AtCoderStreak.TestUtil
 {
-    public class Logger : ILogger<ConsoleAppEngine>, ILogger
+    public class Logger : ILogger<ConsoleApp>, ILogger
     {
         private readonly List<(LogLevel level, string msg, EventId eventId, Exception exception)> list = new List<(LogLevel level, string msg, EventId eventId, Exception exception)>();
         public ReadOnlyCollection<(LogLevel level, string msg, EventId eventId, Exception exception)> Logs { get; }

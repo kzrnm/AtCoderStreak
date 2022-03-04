@@ -1,6 +1,5 @@
 ﻿using AtCoderStreak.Model;
 using AtCoderStreak.Service;
-using ConsoleAppFramework;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,7 +23,6 @@ namespace AtCoderStreak
             await Host.CreateDefaultBuilder()
                 .ConfigureServices(services =>
                 {
-
                     services.AddHttpClient("allowRedirect")
                     .ConfigurePrimaryHttpMessageHandler(() =>
                     {
@@ -77,7 +75,7 @@ namespace AtCoderStreak
             if (!string.IsNullOrEmpty(argCookie))
             {
                 if (File.Exists(argCookie))
-                    argCookie = File.ReadAllText(argCookie);
+                    argCookie = File.ReadAllText(argCookie).Trim();
 
                 if (!argCookie.Contains("%00"))
                     argCookie = HttpUtility.UrlEncode(argCookie);

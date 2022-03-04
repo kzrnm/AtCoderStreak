@@ -22,7 +22,9 @@ namespace AtCoderStreak.TestUtil
                       Array.Empty<string>(),
                       DateTime.Now,
                       default,
-                      Logger
+                      Logger,
+                      null,
+                      null
                   ),
             };
         }

@@ -39,14 +39,12 @@ namespace AtCoderStreak.Service
             var client = clientFactory.CreateClient("disallowRedirect");
 
             var res = await client.PostAsync(LoginUrl,
-#pragma warning disable CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
                 new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     {"username", username },
                     {"password", password },
                     {"csrf_token", csrfToken },
                 }),
-#pragma warning restore CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
                 cancellationToken);
 
 
