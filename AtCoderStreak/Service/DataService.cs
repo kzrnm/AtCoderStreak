@@ -137,7 +137,7 @@ namespace AtCoderStreak.Service
             int priority,
             byte[] fileBytes)
         {
-            if (fileBytes.Length > (512 << 10))
+            if (fileBytes.Length > (512 * 1024))
                 throw new ArgumentException("source code is too long", nameof(fileBytes));
 
             var conn = Connect();

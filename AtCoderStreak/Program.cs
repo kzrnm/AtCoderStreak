@@ -68,8 +68,6 @@ namespace AtCoderStreak
             this.StreakService = streakService;
         }
 
-
-
         private string? LoadCookie(string? argCookie)
         {
             if (!string.IsNullOrEmpty(argCookie))

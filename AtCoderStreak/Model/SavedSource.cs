@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.SQLite;
+using System.IO;
 using System.IO.Compression;
 using System.Text;
 
@@ -60,10 +61,9 @@ namespace AtCoderStreak.Model
             var priority = reader.GetInt32(4);
             using var sourceStream = reader.GetStream(3);
             using var gzStream = new GZipStream(sourceStream, CompressionMode.Decompress);
-            Span<byte> buffer = new byte[1 << 20];
-            var size = gzStream.Read(buffer);
-            buffer = buffer[0..size];
-            var ss = new SavedSource(id, url, lang, Encoding.UTF8.GetString(buffer), priority);
+            using var ms = new MemoryStream();
+            gzStream.CopyTo(ms);
+            var ss = new SavedSource(id, url, lang, Encoding.UTF8.GetString(ms.ToArray()), priority);
             return ss;
         }
 
