@@ -1,15 +1,17 @@
+using AtCoderStreak.Model;
+using AtCoderStreak.Model.Entities;
 using AtCoderStreak.TestUtil;
 using FluentAssertions;
 using Moq;
-using System;
 using System.IO;
+using System.Text;
 using Xunit;
 
 namespace AtCoderStreak
 {
     public class AddTests
     {
-        readonly ProgramBuilder pb = new ProgramBuilder();
+        readonly ProgramBuilder pb = new();
         [Fact]
         public void TestAdd_Failed()
         {
@@ -17,7 +19,7 @@ namespace AtCoderStreak
             File.Delete(file);
             pb.Build().Add("http://example.com", "1001", file)
                 .Should().Be(1);
-            pb.DataMock.Verify(d => d.SaveSource(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<byte[]>()), Times.Never());
+            pb.DataMock.Verify(d => d.SaveSource(It.IsAny<Source>()), Times.Never());
         }
 
         [Fact]
@@ -26,13 +28,14 @@ namespace AtCoderStreak
             var file = Path.GetTempFileName();
             try
             {
-                var source = new byte[2000];
-                new Random().NextBytes(source);
-                File.WriteAllBytes(file, source);
+                const string source = "print 2";
+                File.WriteAllText(file, source, new UTF8Encoding(false));
 
-                pb.Build().Add("http://example.com", "1001", file)
-                    .Should().Be(0);
-                pb.DataMock.Verify(d => d.SaveSource("http://example.com", "1001", 0, source));
+                var p = new SavedSource(0, "http://example.com", "1001", 0, source);
+
+                pb.Build().Add("http://example.com", "1001", file).Should().Be(0);
+                pb.DataMock.Verify(d => d.SaveSource(It.Is<Source>(
+                    s => s.ToImmutable() == new SavedSource(0, "http://example.com", "1001", 0, source))));
             }
             finally
             {

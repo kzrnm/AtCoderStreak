@@ -1,20 +1,16 @@
 ﻿using AtCoderStreak.Model;
+using AtCoderStreak.Model.Entities;
+using LiteDB;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data.SQLite;
-using System.IO;
-using System.IO.Compression;
+using System.Linq;
 
 namespace AtCoderStreak.Service
 {
     public interface IDataService
     {
-        void SaveSource(
-            string url,
-            string lang,
-            int priority,
-            byte[] fileBytes);
+        void SaveSource(Source source);
         SavedSource? GetSourceById(int id);
         IEnumerable<SavedSource> GetSourcesByUrl(string url);
         IEnumerable<SavedSource> GetSources(SourceOrder order);
@@ -23,158 +19,106 @@ namespace AtCoderStreak.Service
         void SaveSession(string cookie);
         string? GetSession();
     }
-#pragma warning disable CA1063
     public class DataService : IDataService, IDisposable
     {
-        private string SqlitePath { get; }
-        public DataService(string sqlitePath)
+        private string DbPath { get; }
+        public DataService(string dbPath)
         {
-            this.SqlitePath = sqlitePath;
+            DbPath = dbPath;
         }
 
-        private SQLiteConnection? connection;
-        internal SQLiteConnection Connect()
+        private const string MemoryKey = ":memory:";
+        public static DataService Memory() => new(MemoryKey);
+
+
+        private LiteDatabase? db;
+        internal LiteDatabase Connect()
         {
-            if (connection != null)
-                return connection;
+            if (db != null)
+                return db;
 
-            if (SqlitePath == ":memory:" || File.Exists(SqlitePath)) { }
-            else
-            {
-                try
-                {
-                    using var file = File.Create(SqlitePath);
-                }
-                catch (Exception e)
-                {
-                    throw new FileNotFoundException("sqlite file doesn't exist", SqlitePath, e);
-                }
-            }
-
-            var connsb = new SQLiteConnectionStringBuilder { DataSource = SqlitePath };
-            var conn = new SQLiteConnection(connsb.ToString());
-            conn.Open();
-            using var command = conn.CreateCommand();
-            command.CommandText = "CREATE TABLE IF NOT EXISTS SETTING(name TEXT PRIMARY KEY,data text)";
-            command.ExecuteNonQuery();
-            command.CommandText = "CREATE TABLE IF NOT EXISTS program(id INTEGER PRIMARY KEY,TaskUrl text, LanguageId text, sourceCode blob, priority INTEGER NOT NULL DEFAULT 0)";
-            command.ExecuteNonQuery();
-
-            return connection = conn;
+            return db = new LiteDatabase(new ConnectionString { Filename = DbPath });
         }
-
 
         public void SaveSession(string cookie)
         {
-            var conn = Connect();
-            using var command = conn.CreateCommand();
-            command.CommandText = "INSERT INTO SETTING(name,data) values('session', @cookie)";
-            command.Parameters.Add(new SQLiteParameter("@cookie", cookie));
-            command.ExecuteNonQuery();
+            var db = Connect();
+            db.BeginTrans();
+            var col = db.GetCollection<Setting>();
+            col.Upsert(Setting.Session(cookie));
+            db.Commit();
         }
 
         public string? GetSession()
         {
-            var conn = Connect();
-            using var command = conn.CreateCommand();
-            command.CommandText = "SELECT data FROM SETTING WHERE name = 'session'";
-            using var reader = command.ExecuteReader();
-            if (!reader.Read()) return null;
-            return reader.GetString(0);
+            var db = Connect();
+            var col = db.GetCollection<Setting>();
+            return col.FindById(new BsonValue(Setting.SessionId))?.Data;
         }
 
         public IEnumerable<SavedSource> GetSources(SourceOrder order = SourceOrder.None)
         {
-            const string defaultCommand = "SELECT * FROM program";
-            string commandOrder;
+            var db = Connect();
+            var col = db.GetCollection<Source>();
+            var ret = col.FindAll().Select(s => s.ToImmutable());
 
-            var conn = Connect();
-            using var command = conn.CreateCommand();
             if (order == SourceOrder.None)
             {
-                commandOrder = "ORDER BY priority desc, id";
+                ret = ret
+                    .OrderByDescending(x => x.Priority)
+                    .ThenBy(x => x.Id);
             }
             else if (order == SourceOrder.Reverse)
             {
-                commandOrder = "ORDER BY priority desc, id desc";
+                ret = ret
+                    .OrderByDescending(x => x.Priority)
+                    .ThenByDescending(x => x.Id);
             }
             else
                 throw new InvalidEnumArgumentException(nameof(order), (int)order, typeof(SourceOrder));
-            command.CommandText = $"{defaultCommand} {commandOrder}";
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                yield return SavedSource.FromReader(reader);
-            }
+
+            return ret;
         }
         public SavedSource? GetSourceById(int id)
         {
-            var conn = Connect();
-            using var command = conn.CreateCommand();
-            command.CommandText = "SELECT * FROM program WHERE id = @id";
-            command.Parameters.Add(new SQLiteParameter("@id", id));
-
-            using var reader = command.ExecuteReader();
-            return reader.Read() ? SavedSource.FromReader(reader) : null;
-
+            var db = Connect();
+            var col = db.GetCollection<Source>();
+            return col.Query().Where(s => s.Id == id).FirstOrDefault()?.ToImmutable();
         }
         public IEnumerable<SavedSource> GetSourcesByUrl(string url)
         {
-            var conn = Connect();
-            using var command = conn.CreateCommand();
-            command.CommandText = "SELECT * FROM program WHERE TaskUrl = @url";
-            command.Parameters.Add(new SQLiteParameter("@url", url));
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                yield return SavedSource.FromReader(reader);
-            }
+            var db = Connect();
+            var col = db.GetCollection<Source>();
+            return col.Query().Where(s => s.TaskUrl == url).ToEnumerable().Select(s => s.ToImmutable());
         }
-        public void SaveSource(
-            string url,
-            string lang,
-            int priority,
-            byte[] fileBytes)
+        public void SaveSource(Source source)
         {
-            if (fileBytes.Length > (512 * 1024))
-                throw new ArgumentException("source code is too long", nameof(fileBytes));
+            if (source.CompressedSourceCode.Length >= (1024 * 1024))
+                throw new ArgumentException("source code is too long", nameof(source));
 
-            var conn = Connect();
-            using var command = conn.CreateCommand();
-            command.CommandText = "INSERT INTO program(TaskUrl,LanguageId,sourceCode, priority) values(@url, @lang, @source, @priority)";
-            command.Parameters.Add(new SQLiteParameter("@url", url));
-            command.Parameters.Add(new SQLiteParameter("@lang", lang));
-            command.Parameters.Add(new SQLiteParameter("@priority", priority));
-            using var ms = new MemoryStream(512 * 1024);
-            using (var gz = new GZipStream(ms, CompressionMode.Compress))
-                gz.Write(fileBytes);
-            var gzSource = ms.ToArray();
-
-            command.Parameters.Add(new SQLiteParameter("@source", gzSource));
-            command.ExecuteNonQuery();
+            var db = Connect();
+            var col = db.GetCollection<Source>();
+            db.BeginTrans();
+            col.Insert(source);
+            db.Commit();
         }
         public void DeleteSources(IEnumerable<int> ids)
         {
-            var conn = Connect();
-            using var tr = conn.BeginTransaction();
+            var db = Connect();
+            var col = db.GetCollection<Source>();
+            db.BeginTrans();
             foreach (var id in ids)
             {
-                using var command = conn.CreateCommand();
-                command.CommandText = "DELETE FROM program where id = @id";
-                command.Parameters.Add(new SQLiteParameter("@id", id));
-                command.ExecuteNonQuery();
+                col.Delete(new BsonValue(id));
             }
-            tr.Commit();
+            db.Commit();
         }
 
         public void Dispose()
         {
-            this.connection?.Dispose();
+            db?.Dispose();
             GC.SuppressFinalize(this);
         }
-
-#pragma warning restore
     }
 
     public enum SourceOrder

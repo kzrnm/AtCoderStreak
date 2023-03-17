@@ -1,32 +1,12 @@
 ﻿using System;
-using System.Data.SQLite;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
 
 namespace AtCoderStreak.Model
 {
-    public class SavedSource
+    public record SavedSource(int Id, string TaskUrl, string LanguageId, int Priority, string SourceCode)
     {
-        public int Id { get; }
-        public string TaskUrl { get; }
-        public string LanguageId { get; }
-        public string SourceCode { get; }
-        public int Priority { get; }
-        public SavedSource(
-            int id,
-            string url,
-            string lang,
-            string source,
-            int priority)
-        {
-            this.Id = id;
-            this.TaskUrl = url;
-            this.LanguageId = lang;
-            this.SourceCode = source;
-            this.Priority = priority;
-        }
-
         public override string ToString() => $"{Id}(priority:{Priority}): {TaskUrl}";
 
         private bool? parseUrlResult;
@@ -50,43 +30,8 @@ namespace AtCoderStreak.Model
         }
         public (string contest, string problem, string baseUrl) SubmitInfo()
         {
-            if (this.CanParse()) return (contest, problem, baseUrl);
+            if (CanParse()) return (contest, problem, baseUrl);
             throw new InvalidOperationException("failed to parse TaskUrl");
         }
-        public static SavedSource FromReader(SQLiteDataReader reader)
-        {
-            var id = reader.GetInt32(0);
-            var url = reader.GetString(1);
-            var lang = reader.GetString(2);
-            var priority = reader.GetInt32(4);
-            using var sourceStream = reader.GetStream(3);
-            using var gzStream = new GZipStream(sourceStream, CompressionMode.Decompress);
-            using var ms = new MemoryStream();
-            gzStream.CopyTo(ms);
-            var ss = new SavedSource(id, url, lang, Encoding.UTF8.GetString(ms.ToArray()), priority);
-            return ss;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            return obj is SavedSource source &&
-                   this.Id == source.Id &&
-                   this.TaskUrl == source.TaskUrl &&
-                   this.LanguageId == source.LanguageId &&
-                   this.SourceCode == source.SourceCode &&
-                   this.Priority == source.Priority;
-        }
-
-        public override int GetHashCode()
-        {
-            HashCode hash = new HashCode();
-            hash.Add(this.Id);
-            hash.Add(this.TaskUrl);
-            hash.Add(this.LanguageId);
-            hash.Add(this.SourceCode);
-            hash.Add(this.Priority);
-            return hash.ToHashCode();
-        }
     }
-
 }

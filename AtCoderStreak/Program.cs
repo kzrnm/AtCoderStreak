@@ -1,4 +1,5 @@
 ﻿using AtCoderStreak.Model;
+using AtCoderStreak.Model.Entities;
 using AtCoderStreak.Service;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +13,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
+using UtfUnknown;
 
 namespace AtCoderStreak
 {
@@ -42,7 +44,7 @@ namespace AtCoderStreak
                         };
                     });
                     services.AddSingleton<IDataService>(
-                        new DataService(Path.Combine(AppDir, "data.sqlite")));
+                        new DataService(Path.Combine(AppDir, "data.db")));
                     services.AddSingleton<IStreakService, StreakService>();
                 })
                 .ConfigureLogging(logging =>
@@ -64,8 +66,8 @@ namespace AtCoderStreak
             IStreakService streakService
             )
         {
-            this.DataService = dataService;
-            this.StreakService = streakService;
+            DataService = dataService;
+            StreakService = streakService;
         }
 
         private string? LoadCookie(string? argCookie)
@@ -139,10 +141,21 @@ namespace AtCoderStreak
             }
             foreach (var s in DataService.GetSourcesByUrl(url))
             {
-                Context.Logger.LogInformation("[Warning]exist: {0}", s.ToString());
+                Context.Logger.LogInformation("[Warning]exist: {s}", s.ToString());
             }
-            DataService.SaveSource(url, lang, priority, File.ReadAllBytes(file));
-            Context.Logger.LogInformation($"finish: {url}, {file}, lang:{lang}, priority:{priority}");
+
+            var bytes = File.ReadAllBytes(file);
+            var encoding = CharsetDetector.DetectFromFile(file)?.Detected?.Encoding ?? Encoding.UTF8;
+
+            DataService.SaveSource(new Source
+            {
+                TaskUrl = url,
+                LanguageId = lang,
+                Priority = priority,
+                SourceCode = encoding.GetString(bytes),
+            });
+
+            Context.Logger.LogInformation("Finish: {url}, {file}, lang:{lang}, priority:{priority}", url, file, lang, priority);
             return 0;
         }
 
@@ -159,12 +172,12 @@ namespace AtCoderStreak
             }
             catch (ArgumentException e)
             {
-                Context.Logger.LogError(e.Message);
+                Context.Logger.LogError("Fail to Restore:{Message}", e.Message);
                 return 128;
             }
             if (source != null)
             {
-                Context.Logger.LogInformation("restore: {0}", source.ToString());
+                Context.Logger.LogInformation("Restore: {source}", source.ToString());
                 File.WriteAllText(file, source.SourceCode, new UTF8Encoding(true));
                 return 0;
             }
@@ -200,7 +213,7 @@ namespace AtCoderStreak
 
             if (await LatestInternal(cookie) is { } max)
             {
-                Context.Logger.LogInformation(max.ToString());
+                Context.Logger.LogInformation("Latest Submit:{max}", max.ToString());
                 return 0;
             }
             else
@@ -240,7 +253,7 @@ namespace AtCoderStreak
             }
             try
             {
-                var source = new SavedSource(0, url, lang, sourceCode, 0);
+                var source = new SavedSource(0, url, lang, 0, sourceCode);
                 var submitRes = await StreakService.SubmitSource(source, cookie, false, Context.CancellationToken);
                 return 0;
             }
@@ -272,7 +285,7 @@ namespace AtCoderStreak
             {
                 if (await SubmitInternal(order, force, cookie) is { } latest)
                 {
-                    Context.Logger.LogInformation(latest.ToString());
+                    Context.Logger.LogInformation("Submit: {latest}", latest.ToString());
                     return 0;
                 }
                 else
@@ -295,11 +308,11 @@ namespace AtCoderStreak
             {
                 if (submitSuccess)
                 {
-                    Context.Logger.LogInformation("Submit: {0}", source.TaskUrl);
+                    Context.Logger.LogInformation("Submit: {Url}", source.TaskUrl);
                 }
                 else
                 {
-                    Context.Logger.LogError("Failed to submit: {0}", source.TaskUrl);
+                    Context.Logger.LogError("Failed to submit: {Url}", source.TaskUrl);
                 }
             }
             return 0;

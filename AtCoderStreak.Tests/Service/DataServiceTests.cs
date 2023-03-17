@@ -1,8 +1,8 @@
 ﻿using AtCoderStreak.Model;
+using AtCoderStreak.Model.Entities;
 using FluentAssertions;
 using System;
 using System.Linq;
-using System.Text;
 using Xunit;
 
 namespace AtCoderStreak.Service
@@ -18,16 +18,23 @@ namespace AtCoderStreak.Service
 }";
         static string MakeSource(int i) => SourceCode.Replace("' '", $"\"{i}\"");
 
-        readonly IDataService service = new DataService(":memory:");
+        readonly IDataService service = DataService.Memory();
         readonly SavedSource[] saved = new SavedSource[100];
 
         public DataServiceTests()
         {
             for (int i = 1; i <= 100; i++)
             {
-                var ss = new SavedSource(i, $"http://example.com/{i / 2}", "1000", MakeSource(i), i % 5 - 2);
+                var ss = new SavedSource(i, $"http://example.com/{i / 2}", "1000", i % 5 - 2, MakeSource(i));
                 saved[i - 1] = ss;
-                service.SaveSource(ss.TaskUrl, ss.LanguageId, i % 5 - 2, Encoding.UTF8.GetBytes(ss.SourceCode));
+                service.SaveSource(new Source
+                {
+                    Id = 0,
+                    TaskUrl = ss.TaskUrl,
+                    LanguageId = ss.LanguageId,
+                    Priority = i % 5 - 2,
+                    SourceCode = ss.SourceCode,
+                });
             }
         }
 
@@ -35,7 +42,7 @@ namespace AtCoderStreak.Service
         public void TestSession()
         {
             const string cookie = "REVEL_SESSION=012346798%00%00csrf_token%3AcrfafafafaD%00";
-            IDataService service = new DataService(":memory:");
+            IDataService service = DataService.Memory();
             service.GetSession().Should().Be(null);
             service.SaveSession(cookie);
             service.GetSession().Should().Be(cookie);
@@ -53,13 +60,28 @@ namespace AtCoderStreak.Service
             service.GetSources(SourceOrder.None).Should()
                 .Equal(saved.Skip(2).OrderByDescending(s => s.Priority).ThenBy(s => s.Id));
 
-            service
-                .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[(512 << 10) + 1]))
+
+
+
+            service.Invoking(s => s.SaveSource(new Source
+            {
+                Id = 0,
+                TaskUrl = "http://example.com",
+                LanguageId = "4000",
+                Priority = 0,
+                CompressedSourceCode = new byte[1024 * 1024]
+            }))
                 .Should()
                 .Throw<ArgumentException>()
-                .WithMessage("source code is too long (Parameter 'fileBytes')");
-            service
-                .Invoking(s => s.SaveSource("http://example.com", "4000", 0, new byte[512 << 10]))
+                .WithMessage("source code is too long (Parameter 'source')");
+            service.Invoking(s => s.SaveSource(new Source
+            {
+                Id = 0,
+                TaskUrl = "http://example.com",
+                LanguageId = "4000",
+                Priority = 0,
+                CompressedSourceCode = new byte[1024 * 1024 - 1]
+            }))
                 .Should()
                 .NotThrow<ArgumentException>();
         }

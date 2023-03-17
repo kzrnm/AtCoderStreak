@@ -20,9 +20,7 @@ namespace AtCoderStreak.Model
     {
         public (string csrfToken, string userName) ParseCookie(string cookie)
         {
-            var rs = FilterREVEL_SESSION(cookie.Split(';'));
-            if (rs == null)
-                throw new ArgumentException("invalid cookie", nameof(cookie));
+            var rs = FilterREVEL_SESSION(cookie.Split(';')) ?? throw new ArgumentException("invalid cookie", nameof(cookie));
             var prs = HttpUtility.UrlDecode(rs["REVEL_SESSION=".Length..]);
             var ra = prs.Split('\0', StringSplitOptions.RemoveEmptyEntries);
 
@@ -68,9 +66,8 @@ namespace AtCoderStreak.Model
             var document = await parser.ParseDocumentAsync(stream, cancellationToken);
             return document
                 .GetElementsByClassName("submission-score")
-                .Select(el => el.Attributes["data-id"].Value)
-                .Where(s => s != null)
-                .FirstOrDefault();
+                .Select(el => el.Attributes["data-id"]?.Value)
+                .FirstOrDefault(s => s != null);
         }
 
         public async Task<SubmissionStatus> DeserializeSubmissionDetail(Stream stream, CancellationToken cancellationToken = default)
@@ -79,11 +76,13 @@ namespace AtCoderStreak.Model
             {
                 Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
             };
-            var status = await JsonSerializer.DeserializeAsync<SubmissionStatus>(stream, opt, cancellationToken);
-            if (status is null) throw new InvalidDataException();
-            var parser = new HtmlParser();
-            var document = await parser.ParseDocumentAsync(status.Html, cancellationToken);
-            status.IsSuccess = document.GetElementsByClassName("label-success").Any();
+            var status = await JsonSerializer.DeserializeAsync<SubmissionStatus>(stream, opt, cancellationToken).ConfigureAwait(false) ?? throw new InvalidDataException();
+            if (status.Html is not null)
+            {
+                var parser = new HtmlParser();
+                var document = await parser.ParseDocumentAsync(status.Html, cancellationToken);
+                status.IsSuccess = document.GetElementsByClassName("label-success").Any();
+            }
             return status;
         }
 

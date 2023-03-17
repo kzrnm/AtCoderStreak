@@ -1,23 +1,21 @@
 using AtCoderStreak.Model;
 using AtCoderStreak.Service;
+using AtCoderStreak.TestUtil;
 using FluentAssertions;
 using Moq;
 using System;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
-using AtCoderStreak.TestUtil;
 
 namespace AtCoderStreak
 {
     public class SubmitTests
     {
-        readonly ProgramBuilder pb = new ProgramBuilder();
+        readonly ProgramBuilder pb = new();
 
-
-        public static TheoryData TestIsToday_Data
+        public static readonly TheoryData TestIsToday_Data
             = new TheoryData<bool, DateTime>
             {
                 {
@@ -196,9 +194,9 @@ namespace AtCoderStreak
             pb.DataMock
                 .Setup(d => d.GetSources(It.IsAny<SourceOrder>()))
                 .Returns(new[] {
-                    new SavedSource(1,"http://example.com/contests/ex1/tasks/ex1_2", "1010", @"echo 1",0),
-                    new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", @"echo 2",0),
-                    new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", @"echo 3",2),
+                    new SavedSource(1,"http://example.com/contests/ex1/tasks/ex1_2", "1010", 0, @"echo 1"),
+                    new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", 0, @"echo 2"),
+                    new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", 2, @"echo 3"),
                 });
             var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "dumcookie");
             ret.Should().Be(null);
@@ -240,10 +238,10 @@ namespace AtCoderStreak
             pb.DataMock
                 .Setup(d => d.GetSources(It.IsAny<SourceOrder>()))
                 .Returns(new[] {
-                    new SavedSource(1,"http://example.com/contests/ex1/tasks/ex1_2", "1010", @"echo 1",0),
-                    new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", @"echo 2",0),
-                    new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", @"echo 3",0),
-                    new SavedSource(4,"http://example.com/contests/ex4/tasks/ex4_2", "4040", @"echo 4",0),
+                    new SavedSource(1,"http://example.com/contests/ex1/tasks/ex1_2", "1010", 0, @"echo 1"),
+                    new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", 0, @"echo 2"),
+                    new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", 0, @"echo 3"),
+                    new SavedSource(4,"http://example.com/contests/ex4/tasks/ex4_2", "4040", 0, @"echo 4"),
                 });
             pb.StreakMock
                 .Setup(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), true, It.IsAny<CancellationToken>()))

@@ -1,22 +1,20 @@
 ﻿using FluentAssertions;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Xunit;
 
 namespace AtCoderStreak.Model
 {
     public class SavedSourceTests
     {
-        public static TheoryData SourceTestSubmitInfo
+        public static readonly TheoryData SourceTestSubmitInfo
             = new TheoryData<(string, string, string)?, SavedSource> {
             {
                 ("abc169", "abc169_a", "https://atcoder.jp/contests/abc169"),
-                new SavedSource(1, "https://atcoder.jp/contests/abc169/tasks/abc169_a", "4009", @"{print $1 * $2}",0)
+                new SavedSource(1, "https://atcoder.jp/contests/abc169/tasks/abc169_a", "4009", 0, @"{print $1 * $2}")
             },
             {
                 null,
-                new SavedSource(1, "https://atcoder.jp/contests/abc169/", "4009", @"{print $1 * $2}",0)
+                new SavedSource(1, "https://atcoder.jp/contests/abc169/", "4009", 0, @"{print $1 * $2}")
             },
         };
         [Theory]

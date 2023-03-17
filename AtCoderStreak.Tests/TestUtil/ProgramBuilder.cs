@@ -2,6 +2,7 @@
 using ConsoleAppFramework;
 using Moq;
 using System;
+using System.Threading;
 
 namespace AtCoderStreak.TestUtil
 {
@@ -11,7 +12,8 @@ namespace AtCoderStreak.TestUtil
 
         public Mock<IDataService> DataMock { set; get; } = new Mock<IDataService>();
         public Mock<IStreakService> StreakMock { set; get; } = new Mock<IStreakService>();
-        public Logger Logger { get; } = new Logger();
+        public Logger Logger { get; } = new();
+        public CancellationTokenSource CancellationTokenSource { get; } = new();
         public void SetupCookie() => DataMock.Setup(d => d.GetSession()).Returns(cookie);
 
         public Program Build()
@@ -21,7 +23,7 @@ namespace AtCoderStreak.TestUtil
                 Context = new ConsoleAppContext(
                       Array.Empty<string>(),
                       DateTime.Now,
-                      default,
+                      CancellationTokenSource,
                       Logger,
                       null,
                       null
