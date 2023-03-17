@@ -52,11 +52,14 @@ namespace AtCoderStreak
 
             services.AddLogging(logging =>
             {
+                logging
+                .AddFilter((s, t, lv) => t?.Contains("HttpClient") != true)
 #if DEBUG
-                logging.SetMinimumLevel(LogLevel.Debug);
+                .SetMinimumLevel(LogLevel.Debug)
 #else
-            logging.SetMinimumLevel(LogLevel.Error);
+                .SetMinimumLevel(LogLevel.Information)
 #endif
+                .AddSimpleConsole();
             });
 
             services.AddTransient<Program>();
@@ -170,34 +173,6 @@ namespace AtCoderStreak
 
         Command BuildAddCommand()
         {
-            int Add(string url, string lang, FileInfo file, int priority)
-            {
-                if (!file.Exists)
-                {
-                    Logger.LogError("Error:file not found");
-                    return 1;
-                }
-                foreach (var s in DataService.GetSourcesByUrl(url))
-                {
-                    Logger.LogInformation("[Warning]exist: {s}", s.ToString());
-                }
-
-                using var fs = file.OpenRead();
-                var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
-                fs.Position = 0;
-                using var reader = new StreamReader(fs, encoding);
-
-                DataService.SaveSource(new Source
-                {
-                    TaskUrl = url,
-                    LanguageId = lang,
-                    Priority = priority,
-                    SourceCode = reader.ReadToEnd(),
-                });
-                Logger.LogInformation("Finish: {url}, {file}, lang:{lang}, priority:{priority}", url, file, lang, priority);
-                return 0;
-            }
-
             var fileOption = new Option<FileInfo>(
                 aliases: new[] { "--file", "-f" },
                 description: "source file path.")
@@ -236,9 +211,36 @@ namespace AtCoderStreak
                 var lang = ctx.ParseResult.GetValueForOption(langOption)!;
                 var priority = ctx.ParseResult.GetValueForOption(priorityOption);
 
-                ctx.ExitCode = Add(url, lang, file, priority);
+                ctx.ExitCode = AddInternal(url, lang, file, priority);
             });
             return command;
+        }
+        public int AddInternal(string url, string lang, FileInfo file, int priority)
+        {
+            if (!file.Exists)
+            {
+                Logger.LogError("Error:file not found");
+                return 1;
+            }
+            foreach (var s in DataService.GetSourcesByUrl(url))
+            {
+                Logger.LogInformation("[Warning]exist: {s}", s.ToString());
+            }
+
+            var encoding = CharsetDetector.DetectFromFile(file.FullName)?.Detected?.Encoding ?? Encoding.UTF8;
+            using var fs = file.OpenRead();
+            fs.Position = 0;
+            using var reader = new StreamReader(fs, encoding);
+
+            DataService.SaveSource(new Source
+            {
+                TaskUrl = url,
+                LanguageId = lang,
+                Priority = priority,
+                SourceCode = reader.ReadToEnd(),
+            });
+            Logger.LogInformation("Finish: {url}, {file}, lang:{lang}, priority:{priority}", url, file, lang, priority);
+            return 0;
         }
 
         Command BuildRestoreCommand()
@@ -349,7 +351,7 @@ namespace AtCoderStreak
             return command;
         }
 
-        public async Task<ProblemsSubmission?> LatestInternal(string cookie, CancellationToken cancellationToken)
+        public async Task<ProblemsSubmission?> LatestInternal(string cookie, CancellationToken cancellationToken = default)
         {
             var submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
             return submits.Latest();
@@ -365,8 +367,8 @@ namespace AtCoderStreak
                     return 1;
                 }
 
+                var encoding = CharsetDetector.DetectFromFile(file.FullName)?.Detected?.Encoding ?? Encoding.UTF8;
                 using var fs = file.OpenRead();
-                var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
                 fs.Position = 0;
                 using var reader = new StreamReader(fs, encoding);
 
@@ -417,7 +419,7 @@ namespace AtCoderStreak
         }
 
 
-        public async Task<int> SubmitFileInternal(string sourceCode, string url, string lang, string? cookie, CancellationToken cancellationToken)
+        public async Task<int> SubmitFileInternal(string sourceCode, string url, string lang, string? cookie, CancellationToken cancellationToken = default)
         {
             cookie = LoadCookie(cookie);
             if (cookie == null)
@@ -441,38 +443,6 @@ namespace AtCoderStreak
 
         Command BuildSubmitCommand()
         {
-            async Task<int> Submit(SourceOrder order, bool force, int paralell, string? cookie, CancellationToken cancellationToken)
-            {
-                cookie = LoadCookie(cookie);
-                if (cookie == null)
-                {
-                    Logger.LogError("Error: no session");
-                    return 255;
-                }
-
-                if (paralell > 0)
-                    return await SubmitParallel(order, paralell, cookie, cancellationToken);
-
-                try
-                {
-                    if (await SubmitInternal(order, force, cookie, cancellationToken) is { } latest)
-                    {
-                        Logger.LogInformation("Submit: {latest}", latest.ToString());
-                        return 0;
-                    }
-                    else
-                    {
-                        Logger.LogError("Error: not found new source");
-                        return 1;
-                    }
-                }
-                catch (HttpRequestException e)
-                {
-                    Logger.LogError(e, "Error: submit error");
-                    return 2;
-                }
-            }
-
             var orderOption = new Option<SourceOrder>(
                 aliases: new[] { "--order", "-o" },
                 getDefaultValue: () => SourceOrder.None,
@@ -492,12 +462,12 @@ namespace AtCoderStreak
                 description: "cookie header string or textfile.");
 
             var command = new Command("submit", "Submit source")
-        {
-            orderOption,
-            forceOption,
-            parallelOption,
-            cookieOption,
-        };
+            {
+                orderOption,
+                forceOption,
+                parallelOption,
+                cookieOption,
+            };
 
             command.SetHandler(async (InvocationContext ctx) =>
             {
@@ -505,15 +475,47 @@ namespace AtCoderStreak
                 var force = ctx.ParseResult.GetValueForOption(forceOption);
                 var parallel = ctx.ParseResult.GetValueForOption(parallelOption);
                 var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
-                ctx.ExitCode = await Submit(order, force, parallel, cookie, ctx.GetCancellationToken());
+                ctx.ExitCode = await SubmitInternal(order, force, parallel, cookie, ctx.GetCancellationToken());
             });
             return command;
         }
 
+        public async Task<int> SubmitInternal(SourceOrder order, bool force, int paralell, string? cookie, CancellationToken cancellationToken = default)
+        {
+            cookie = LoadCookie(cookie);
+            if (cookie == null)
+            {
+                Logger.LogError("Error: no session");
+                return 255;
+            }
+
+            if (paralell > 0)
+                return await SubmitParallel(order, paralell, cookie, cancellationToken);
+
+            try
+            {
+                if (await SubmitSingleInternal(order, force, cookie, cancellationToken) is { } latest)
+                {
+                    Logger.LogInformation("Submit: {latest}", latest.ToString());
+                    return 0;
+                }
+                else
+                {
+                    Logger.LogError("Error: not found new source");
+                    return 1;
+                }
+            }
+            catch (HttpRequestException e)
+            {
+                Logger.LogError(e, "Error: submit error");
+                return 2;
+            }
+        }
 
         internal async Task<int> SubmitParallel(SourceOrder order, int paralell, string cookie, CancellationToken cancellationToken)
         {
             var res = await SubmitInternalParallel(order, cookie, paralell, cancellationToken);
+            Logger.LogInformation("Count: {Length}", res.Length);
             foreach (var (source, submitSuccess) in res)
             {
                 if (submitSuccess)
@@ -533,7 +535,7 @@ namespace AtCoderStreak
             => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified), TimeSpan.FromHours(9)).Date >= DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date;
 
         internal async Task<(string contest, string problem, DateTime time)?>
-            SubmitInternal(SourceOrder order, bool force, string cookie, CancellationToken cancellationToken)
+            SubmitSingleInternal(SourceOrder order, bool force, string cookie, CancellationToken cancellationToken)
         {
             ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
             if (!force)
@@ -568,7 +570,6 @@ namespace AtCoderStreak
         internal async Task<(SavedSource source, bool submitSuccess)[]>
             SubmitInternalParallel(SourceOrder order, string cookie, int paralellNum, CancellationToken cancellationToken)
         {
-            ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
             var tasks = new List<(SavedSource source, Task<(string contest, string problem, DateTime time)?> submitTask)>();
             foreach (var source in DataService.GetSources(order))
             {
@@ -579,27 +580,29 @@ namespace AtCoderStreak
                     tasks.Add((source, StreakService.SubmitSource(source, cookie, false, cancellationToken)));
                 }
             }
-            await Task.WhenAll(tasks.Select(t => t.submitTask));
 
             var usedIds = new List<int>();
             var res = new List<(SavedSource source, bool submitSuccess)>();
             foreach (var (source, task) in tasks)
             {
-                if (task.IsCompletedSuccessfully)
+                try
                 {
+                    await task;
                     usedIds.Add(source.Id);
                     res.Add((source, true));
                 }
-                else
+                catch (Exception e)
                 {
+                    Logger.LogError(e, "failed");
                     res.Add((source, false));
                 }
             }
 
-            DataService.DeleteSources(usedIds);
+            DeleteInternal(usedIds);
             return res.ToArray();
         }
 
+        public IEnumerable<SavedSource> GetSources() => DataService.GetSources(SourceOrder.None);
+        public void DeleteInternal(IEnumerable<int> ids) => DataService.DeleteSources(ids);
     }
-
 }

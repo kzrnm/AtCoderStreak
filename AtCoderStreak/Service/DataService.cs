@@ -12,37 +12,29 @@ namespace AtCoderStreak.Service
     {
         void SaveSource(Source source);
         SavedSource? GetSourceById(int id);
-        IEnumerable<SavedSource> GetSourcesByUrl(string url);
-        IEnumerable<SavedSource> GetSources(SourceOrder order);
+        SavedSource[] GetSourcesByUrl(string url);
+        SavedSource[] GetSources(SourceOrder order);
         void DeleteSources(IEnumerable<int> ids);
 
         void SaveSession(string cookie);
         string? GetSession();
     }
-    public class DataService : IDataService, IDisposable
+    public class DataService : IDataService
     {
-        private string DbPath { get; }
         public DataService(string dbPath)
         {
-            DbPath = dbPath;
+            ConnectionString = new ConnectionString { Filename = dbPath };
         }
 
-        private const string MemoryKey = ":memory:";
-        public static DataService Memory() => new(MemoryKey);
-
-
-        private LiteDatabase? db;
-        internal LiteDatabase Connect()
+        private readonly ConnectionString ConnectionString;
+        protected virtual LiteDatabase Connect()
         {
-            if (db != null)
-                return db;
-
-            return db = new LiteDatabase(new ConnectionString { Filename = DbPath });
+            return new LiteDatabase(ConnectionString);
         }
 
         public void SaveSession(string cookie)
         {
-            var db = Connect();
+            using var db = Connect();
             db.BeginTrans();
             var col = db.GetCollection<Setting>();
             col.Upsert(Setting.Session(cookie));
@@ -51,14 +43,14 @@ namespace AtCoderStreak.Service
 
         public string? GetSession()
         {
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Setting>();
             return col.FindById(new BsonValue(Setting.SessionId))?.Data;
         }
 
-        public IEnumerable<SavedSource> GetSources(SourceOrder order = SourceOrder.None)
+        public SavedSource[] GetSources(SourceOrder order = SourceOrder.None)
         {
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Source>();
             var ret = col.FindAll().Select(s => s.ToImmutable());
 
@@ -77,26 +69,26 @@ namespace AtCoderStreak.Service
             else
                 throw new InvalidEnumArgumentException(nameof(order), (int)order, typeof(SourceOrder));
 
-            return ret;
+            return ret.ToArray();
         }
         public SavedSource? GetSourceById(int id)
         {
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Source>();
             return col.Query().Where(s => s.Id == id).FirstOrDefault()?.ToImmutable();
         }
-        public IEnumerable<SavedSource> GetSourcesByUrl(string url)
+        public SavedSource[] GetSourcesByUrl(string url)
         {
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Source>();
-            return col.Query().Where(s => s.TaskUrl == url).ToEnumerable().Select(s => s.ToImmutable());
+            return col.Query().Where(s => s.TaskUrl == url).ToEnumerable().Select(s => s.ToImmutable()).ToArray();
         }
         public void SaveSource(Source source)
         {
             if (source.CompressedSourceCode.Length >= (1024 * 1024))
                 throw new ArgumentException("source code is too long", nameof(source));
 
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Source>();
             db.BeginTrans();
             col.Insert(source);
@@ -104,7 +96,7 @@ namespace AtCoderStreak.Service
         }
         public void DeleteSources(IEnumerable<int> ids)
         {
-            var db = Connect();
+            using var db = Connect();
             var col = db.GetCollection<Source>();
             db.BeginTrans();
             foreach (var id in ids)
@@ -112,12 +104,6 @@ namespace AtCoderStreak.Service
                 col.Delete(new BsonValue(id));
             }
             db.Commit();
-        }
-
-        public void Dispose()
-        {
-            db?.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 

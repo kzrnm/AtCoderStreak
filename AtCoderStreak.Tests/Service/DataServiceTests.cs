@@ -1,12 +1,43 @@
 ﻿using AtCoderStreak.Model;
 using AtCoderStreak.Model.Entities;
 using FluentAssertions;
+using LiteDB;
 using System;
 using System.Linq;
 using Xunit;
 
 namespace AtCoderStreak.Service
 {
+    public class MemoryDataService : DataService
+    {
+        private readonly LiteDatabase db;
+
+        public MemoryDataService() : base(":memory:")
+        {
+            db = new LocalLiteDatabase();
+        }
+        protected override LiteDatabase Connect()
+        {
+            return db;
+        }
+
+        class LocalLiteDatabase : LiteDatabase
+        {
+            public LocalLiteDatabase() : base(":memory:")
+            {
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+            }
+
+            protected void DisposeForce()
+            {
+                base.Dispose(true);
+            }
+        }
+    }
+
     public class DataServiceTests
     {
         const string SourceCode = @"class P
@@ -18,7 +49,7 @@ namespace AtCoderStreak.Service
 }";
         static string MakeSource(int i) => SourceCode.Replace("' '", $"\"{i}\"");
 
-        readonly IDataService service = DataService.Memory();
+        readonly IDataService service = new MemoryDataService();
         readonly SavedSource[] saved = new SavedSource[100];
 
         public DataServiceTests()
@@ -42,7 +73,7 @@ namespace AtCoderStreak.Service
         public void TestSession()
         {
             const string cookie = "REVEL_SESSION=012346798%00%00csrf_token%3AcrfafafafaD%00";
-            IDataService service = DataService.Memory();
+            IDataService service = new MemoryDataService();
             service.GetSession().Should().Be(null);
             service.SaveSession(cookie);
             service.GetSession().Should().Be(cookie);

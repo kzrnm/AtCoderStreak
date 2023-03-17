@@ -87,7 +87,7 @@ namespace AtCoderStreak
                 },
                 todays,
                 });
-            var ret = await pb.SubmitInternal(SourceOrder.None, false, "", default);
+            var ret = await pb.SubmitSingleInternal(SourceOrder.None, false, "", default);
             ret.Should().Be((todays.ContestId, todays.ProblemId, todays.DateTime));
         }
 
@@ -111,7 +111,7 @@ namespace AtCoderStreak
                     Result="AC",
                     DateTime=new DateTime(1000,1,1,11,4,13,0),
                 }});
-            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
+            var ret = await pb.SubmitSingleInternal(SourceOrder.None, false, "dumcookie", default);
             pb.StreakMock.Verify(s => s.GetACSubmissionsAsync("dumcookie", It.IsAny<CancellationToken>()), Times.Once());
 
             ret.Should().BeNull();
@@ -136,7 +136,7 @@ namespace AtCoderStreak
                     Result="AC",
                     DateTime=new DateTime(1000,1,1,11,4,13,0),
                 }});
-            var ret = await pb.SubmitInternal(SourceOrder.None, true, "dumcookie", default);
+            var ret = await pb.SubmitSingleInternal(SourceOrder.None, true, "dumcookie", default);
             pb.StreakMock.Verify(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
 
             ret.Should().BeNull();
@@ -145,11 +145,11 @@ namespace AtCoderStreak
         [Fact]
         public async Task TestSubmit_Verify_Order()
         {
-            await pb.SubmitInternal(SourceOrder.None, true, "dumcookie", default);
+            await pb.SubmitSingleInternal(SourceOrder.None, true, "dumcookie", default);
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.None), Times.Once());
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.Reverse), Times.Never());
 
-            await pb.SubmitInternal(SourceOrder.Reverse, true, "dumcookie", default);
+            await pb.SubmitSingleInternal(SourceOrder.Reverse, true, "dumcookie", default);
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.None), Times.Once());
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.Reverse), Times.Once());
         }
@@ -199,7 +199,7 @@ namespace AtCoderStreak
                     new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", 0, @"echo 2"),
                     new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", 2, @"echo 3"),
                 });
-            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
+            var ret = await pb.SubmitSingleInternal(SourceOrder.None, false, "dumcookie", default);
             ret.Should().Be(null);
 
 
@@ -248,7 +248,7 @@ namespace AtCoderStreak
                 .Setup(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(("ex3", "ex3_2", new DateTime(2020, 3, 2, 4, 5, 0)));
 
-            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
+            var ret = await pb.SubmitSingleInternal(SourceOrder.None, false, "dumcookie", default);
             ret.Should().Be(("ex3", "ex3_2", new DateTime(2020, 3, 2, 4, 5, 0)));
 
             pb.DataMock
