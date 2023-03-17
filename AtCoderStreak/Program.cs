@@ -1,5 +1,4 @@
-﻿using AtCoderStreak;
-using AtCoderStreak.Model;
+﻿using AtCoderStreak.Model;
 using AtCoderStreak.Model.Entities;
 using AtCoderStreak.Service;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,68 +18,70 @@ using System.Web;
 using UtfUnknown;
 
 
-GetDefault()?.RunCommand(args);
+await AtCoderStreak.Program.GetDefault().RunCommand(args);
 
-partial class Program
+namespace AtCoderStreak
 {
-    public static Program GetDefault()
+    public class Program
     {
-        var services = new ServiceCollection();
-        services.AddHttpClient("allowRedirect")
-            .ConfigurePrimaryHttpMessageHandler(() =>
-            {
-                return new HttpClientHandler()
-                {
-                    AllowAutoRedirect = true,
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                };
-            });
-        services.AddHttpClient("disallowRedirect")
-            .ConfigurePrimaryHttpMessageHandler(() =>
-            {
-                return new HttpClientHandler()
-                {
-                    AllowAutoRedirect = false,
-                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                };
-            });
-
-        var appDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
-        services.AddSingleton<IDataService>(new DataService(Path.Combine(appDir, "data.db")));
-        services.AddSingleton<IStreakService, StreakService>();
-
-        services.AddLogging(logging =>
+        public static Program GetDefault()
         {
+            var services = new ServiceCollection();
+            services.AddHttpClient("allowRedirect")
+                .ConfigurePrimaryHttpMessageHandler(() =>
+                {
+                    return new HttpClientHandler()
+                    {
+                        AllowAutoRedirect = true,
+                        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    };
+                });
+            services.AddHttpClient("disallowRedirect")
+                .ConfigurePrimaryHttpMessageHandler(() =>
+                {
+                    return new HttpClientHandler()
+                    {
+                        AllowAutoRedirect = false,
+                        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                    };
+                });
+
+            var appDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
+            services.AddSingleton<IDataService>(new DataService(Path.Combine(appDir, "data.db")));
+            services.AddSingleton<IStreakService, StreakService>();
+
+            services.AddLogging(logging =>
+            {
 #if DEBUG
-            logging.SetMinimumLevel(LogLevel.Debug);
+                logging.SetMinimumLevel(LogLevel.Debug);
 #else
-        logging.SetMinimumLevel(LogLevel.Information).ReplaceToSimpleConsole();
+            logging.SetMinimumLevel(LogLevel.Error);
 #endif
-        });
+            });
 
-        services.AddTransient<Program>();
-        return services.BuildServiceProvider().GetService<Program>()!;
-    }
+            services.AddTransient<Program>();
+            return services.BuildServiceProvider().GetService<Program>()!;
+        }
 
-    private IDataService DataService { get; }
-    private IStreakService StreakService { get; }
-    private ILogger Logger { get; }
-    private RootCommand RootCommand { get; }
-    public Program(
-        IDataService dataService,
-        IStreakService streakService,
-        ILoggerFactory loggerFactory
-        ) : this(dataService, streakService, loggerFactory.CreateLogger<Program>()) { }
-    public Program(
-        IDataService dataService,
-        IStreakService streakService,
-        ILogger logger
-        )
-    {
-        DataService = dataService;
-        StreakService = streakService;
-        Logger = logger;
-        RootCommand = new RootCommand()
+        private IDataService DataService { get; }
+        private IStreakService StreakService { get; }
+        private ILogger Logger { get; }
+        private RootCommand RootCommand { get; }
+        public Program(
+            IDataService dataService,
+            IStreakService streakService,
+            ILoggerFactory loggerFactory
+            ) : this(dataService, streakService, loggerFactory.CreateLogger<Program>()) { }
+        public Program(
+            IDataService dataService,
+            IStreakService streakService,
+            ILogger logger
+            )
+        {
+            DataService = dataService;
+            StreakService = streakService;
+            Logger = logger;
+            RootCommand = new RootCommand()
         {
             BuildLoginCommand(),
             BuildAddCommand(),
@@ -89,138 +90,138 @@ partial class Program
             BuildSubmitFileCommand(),
             BuildSubmitCommand(),
         };
-    }
-
-    public async Task<int> RunCommand(params string[] args)
-        => await RootCommand.InvokeAsync(args);
-
-    private string? LoadCookie(string? argCookie)
-    {
-        if (!string.IsNullOrEmpty(argCookie))
-        {
-            if (File.Exists(argCookie))
-                argCookie = File.ReadAllText(argCookie).Trim();
-
-            if (!argCookie.Contains("%00"))
-                argCookie = HttpUtility.UrlEncode(argCookie);
-            return argCookie;
         }
-        else
-        {
-            return DataService.GetSession();
-        }
-    }
 
-    Command BuildLoginCommand()
-    {
-        async Task<int> Login(string? user, CancellationToken cancellationToken)
+        public async Task<int> RunCommand(params string[] args)
+            => await RootCommand.InvokeAsync(args);
+
+        private string? LoadCookie(string? argCookie)
         {
-            if (string.IsNullOrWhiteSpace(user))
+            if (!string.IsNullOrEmpty(argCookie))
             {
-                Console.Write("input username: ");
-                if (string.IsNullOrWhiteSpace(user = Console.ReadLine()))
+                if (File.Exists(argCookie))
+                    argCookie = File.ReadAllText(argCookie).Trim();
+
+                if (!argCookie.Contains("%00"))
+                    argCookie = HttpUtility.UrlEncode(argCookie);
+                return argCookie;
+            }
+            else
+            {
+                return DataService.GetSession();
+            }
+        }
+
+        Command BuildLoginCommand()
+        {
+            async Task<int> Login(string? user, CancellationToken cancellationToken)
+            {
+                if (string.IsNullOrWhiteSpace(user))
                 {
-                    Logger.LogError("Error: name is empty");
+                    Console.Write("input username: ");
+                    if (string.IsNullOrWhiteSpace(user = Console.ReadLine()))
+                    {
+                        Logger.LogError("Error: name is empty");
+                        return 99;
+                    }
+                }
+
+                Console.Write("input password: ");
+                var password = ConsoleUtil.ReadPassword();
+                if (string.IsNullOrWhiteSpace(password))
+                {
+                    Logger.LogError("Error: password is empty");
                     return 99;
                 }
+
+                return await LoginInternal(user, password, cancellationToken);
             }
 
-            Console.Write("input password: ");
-            var password = ConsoleUtil.ReadPassword();
-            if (string.IsNullOrWhiteSpace(password))
-            {
-                Logger.LogError("Error: password is empty");
-                return 99;
-            }
 
-            return await LoginInternal(user, password, cancellationToken);
-        }
-
-
-        var userOption = new Option<string?>(
-            aliases: new[] { "--user", "-u" },
-            description: "Specify AtCoder user name.");
-        var command = new Command("login", "Save atcoder cookie")
+            var userOption = new Option<string?>(
+                aliases: new[] { "--user", "-u" },
+                description: "Specify AtCoder user name.");
+            var command = new Command("login", "Save atcoder cookie")
         {
             userOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var user = ctx.ParseResult.GetValueForOption(userOption);
-            ctx.ExitCode = await Login(user, ctx.GetCancellationToken());
-        });
-
-        return command;
-    }
-
-    internal async Task<int> LoginInternal(string user, string password, CancellationToken cancellationToken)
-    {
-        var cookie = await StreakService.LoginAsync(user, password, cancellationToken);
-        if (cookie == null)
-        {
-            Logger.LogError("Error: login failed");
-            return 1;
-        }
-        DataService.SaveSession(cookie);
-        Logger.LogInformation("login success");
-        return 0;
-    }
-
-    Command BuildAddCommand()
-    {
-        int Add(string url, string lang, FileInfo file, int priority)
-        {
-            if (!file.Exists)
+            command.SetHandler(async (InvocationContext ctx) =>
             {
-                Logger.LogError("Error:file not found");
+                var user = ctx.ParseResult.GetValueForOption(userOption);
+                ctx.ExitCode = await Login(user, ctx.GetCancellationToken());
+            });
+
+            return command;
+        }
+
+        internal async Task<int> LoginInternal(string user, string password, CancellationToken cancellationToken)
+        {
+            var cookie = await StreakService.LoginAsync(user, password, cancellationToken);
+            if (cookie == null)
+            {
+                Logger.LogError("Error: login failed");
                 return 1;
             }
-            foreach (var s in DataService.GetSourcesByUrl(url))
-            {
-                Logger.LogInformation("[Warning]exist: {s}", s.ToString());
-            }
-
-            using var fs = file.OpenRead();
-            var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
-            fs.Position = 0;
-            using var reader = new StreamReader(fs, encoding);
-
-            DataService.SaveSource(new Source
-            {
-                TaskUrl = url,
-                LanguageId = lang,
-                Priority = priority,
-                SourceCode = reader.ReadToEnd(),
-            });
-            Logger.LogInformation("Finish: {url}, {file}, lang:{lang}, priority:{priority}", url, file, lang, priority);
+            DataService.SaveSession(cookie);
+            Logger.LogInformation("login success");
             return 0;
         }
 
-        var fileOption = new Option<FileInfo>(
-            aliases: new[] { "--file", "-f" },
-            description: "source file path.")
+        Command BuildAddCommand()
         {
-            IsRequired = true,
-        };
-        var langOption = new Option<string>(
-            aliases: new[] { "--lang", "-l" },
-            description: "language ID")
-        {
-            IsRequired = true,
-        };
-        var urlOption = new Option<string>(
-            aliases: new[] { "--url", "-u" },
-            description: "target task url")
-        {
-            IsRequired = true,
-        };
+            int Add(string url, string lang, FileInfo file, int priority)
+            {
+                if (!file.Exists)
+                {
+                    Logger.LogError("Error:file not found");
+                    return 1;
+                }
+                foreach (var s in DataService.GetSourcesByUrl(url))
+                {
+                    Logger.LogInformation("[Warning]exist: {s}", s.ToString());
+                }
 
-        var priorityOption = new Option<int>(
-            aliases: new[] { "--priority", "-p" },
-            getDefaultValue: () => 0);
+                using var fs = file.OpenRead();
+                var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
+                fs.Position = 0;
+                using var reader = new StreamReader(fs, encoding);
 
-        var command = new Command("add", "Add source code")
+                DataService.SaveSource(new Source
+                {
+                    TaskUrl = url,
+                    LanguageId = lang,
+                    Priority = priority,
+                    SourceCode = reader.ReadToEnd(),
+                });
+                Logger.LogInformation("Finish: {url}, {file}, lang:{lang}, priority:{priority}", url, file, lang, priority);
+                return 0;
+            }
+
+            var fileOption = new Option<FileInfo>(
+                aliases: new[] { "--file", "-f" },
+                description: "source file path.")
+            {
+                IsRequired = true,
+            };
+            var langOption = new Option<string>(
+                aliases: new[] { "--lang", "-l" },
+                description: "language ID")
+            {
+                IsRequired = true,
+            };
+            var urlOption = new Option<string>(
+                aliases: new[] { "--url", "-u" },
+                description: "target task url")
+            {
+                IsRequired = true,
+            };
+
+            var priorityOption = new Option<int>(
+                aliases: new[] { "--priority", "-p" },
+                getDefaultValue: () => 0);
+
+            var command = new Command("add", "Add source code")
         {
             fileOption,
             langOption,
@@ -228,175 +229,175 @@ partial class Program
             priorityOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var url = ctx.ParseResult.GetValueForOption(urlOption)!;
-            var file = ctx.ParseResult.GetValueForOption(fileOption)!;
-            var lang = ctx.ParseResult.GetValueForOption(langOption)!;
-            var priority = ctx.ParseResult.GetValueForOption(priorityOption);
+            command.SetHandler(async (InvocationContext ctx) =>
+            {
+                var url = ctx.ParseResult.GetValueForOption(urlOption)!;
+                var file = ctx.ParseResult.GetValueForOption(fileOption)!;
+                var lang = ctx.ParseResult.GetValueForOption(langOption)!;
+                var priority = ctx.ParseResult.GetValueForOption(priorityOption);
 
-            ctx.ExitCode = Add(url, lang, file, priority);
-        });
-        return command;
-    }
-
-    Command BuildRestoreCommand()
-    {
-        async Task<int> Restore(FileInfo file, int id, string? url)
-        {
-            SavedSource? source;
-            try
-            {
-                source = RestoreInternal(id, url);
-            }
-            catch (ArgumentException e)
-            {
-                Logger.LogError("Fail to Restore:{Message}", e.Message);
-                return 128;
-            }
-            if (source != null)
-            {
-                Logger.LogInformation("Restore: {source}", source.ToString());
-
-                using var fs = file.OpenWrite();
-                using var sw = new StreamWriter(fs, new UTF8Encoding(false));
-                await sw.WriteAsync(source.SourceCode);
-                return 0;
-            }
-            else
-            {
-                Logger.LogError($"Error: not found source");
-                return 1;
-            }
+                ctx.ExitCode = Add(url, lang, file, priority);
+            });
+            return command;
         }
 
-        var idArgument = new Argument<int>("id", getDefaultValue: () => -1, description: "Source id");
-        var fileOption = new Option<FileInfo>(aliases: new[] { "--file", "-f" }, description: "source file path.")
+        Command BuildRestoreCommand()
         {
-            IsRequired = true,
-        };
-        var urlOption = new Option<string>(aliases: new[] { "--url", "-u" }, description: "target task url");
+            async Task<int> Restore(FileInfo file, int id, string? url)
+            {
+                SavedSource? source;
+                try
+                {
+                    source = RestoreInternal(id, url);
+                }
+                catch (ArgumentException e)
+                {
+                    Logger.LogError("Fail to Restore:{Message}", e.Message);
+                    return 128;
+                }
+                if (source != null)
+                {
+                    Logger.LogInformation("Restore: {source}", source.ToString());
 
-        var command = new Command("restore", "Restore source code")
+                    using var fs = file.OpenWrite();
+                    using var sw = new StreamWriter(fs, new UTF8Encoding(false));
+                    await sw.WriteAsync(source.SourceCode);
+                    return 0;
+                }
+                else
+                {
+                    Logger.LogError($"Error: not found source");
+                    return 1;
+                }
+            }
+
+            var idArgument = new Argument<int>("id", getDefaultValue: () => -1, description: "Source id");
+            var fileOption = new Option<FileInfo>(aliases: new[] { "--file", "-f" }, description: "source file path.")
+            {
+                IsRequired = true,
+            };
+            var urlOption = new Option<string>(aliases: new[] { "--url", "-u" }, description: "target task url");
+
+            var command = new Command("restore", "Restore source code")
         {
             idArgument,
             fileOption,
             urlOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var file = ctx.ParseResult.GetValueForOption(fileOption)!;
-            var url = ctx.ParseResult.GetValueForOption(urlOption);
-            var id = ctx.ParseResult.GetValueForArgument(idArgument);
-
-            ctx.ExitCode = await Restore(file, id, url);
-        });
-        return command;
-    }
-
-    public SavedSource? RestoreInternal(int id = -1, string? url = null)
-    {
-        if (string.IsNullOrWhiteSpace(url) == (id < 0))
-            throw new ArgumentException($"Error: must use either {nameof(url)} or {nameof(id)}");
-
-        if (!string.IsNullOrWhiteSpace(url))
-            return DataService.GetSourcesByUrl(url).FirstOrDefault();
-        else if (id >= 0)
-            return DataService.GetSourceById(id);
-
-        throw new InvalidOperationException("never");
-    }
-
-    Command BuildLatestCommand()
-    {
-        async Task<int> Latest(string? cookie, CancellationToken cancellationToken)
-        {
-            cookie = LoadCookie(cookie);
-            if (cookie == null)
+            command.SetHandler(async (InvocationContext ctx) =>
             {
-                Logger.LogError("Error: no session");
-                return 255;
-            }
+                var file = ctx.ParseResult.GetValueForOption(fileOption)!;
+                var url = ctx.ParseResult.GetValueForOption(urlOption);
+                var id = ctx.ParseResult.GetValueForArgument(idArgument);
 
-            if (await LatestInternal(cookie, cancellationToken) is { } max)
-            {
-                Logger.LogInformation("Latest Submit:{max}", max.ToString());
-                return 0;
-            }
-            else
-            {
-                Logger.LogError("Error: no AC submit");
-                return 1;
-            }
+                ctx.ExitCode = await Restore(file, id, url);
+            });
+            return command;
         }
 
-        var cookieOption = new Option<string>(
-            aliases: new[] { "--cookie", "-c" },
-            description: "cookie header string or textfile.");
+        public SavedSource? RestoreInternal(int id = -1, string? url = null)
+        {
+            if (string.IsNullOrWhiteSpace(url) == (id < 0))
+                throw new ArgumentException($"Error: must use either {nameof(url)} or {nameof(id)}");
 
-        var command = new Command("latest", "Get latest submit")
+            if (!string.IsNullOrWhiteSpace(url))
+                return DataService.GetSourcesByUrl(url).FirstOrDefault();
+            else if (id >= 0)
+                return DataService.GetSourceById(id);
+
+            throw new InvalidOperationException("never");
+        }
+
+        Command BuildLatestCommand()
+        {
+            async Task<int> Latest(string? cookie, CancellationToken cancellationToken)
+            {
+                cookie = LoadCookie(cookie);
+                if (cookie == null)
+                {
+                    Logger.LogError("Error: no session");
+                    return 255;
+                }
+
+                if (await LatestInternal(cookie, cancellationToken) is { } max)
+                {
+                    Logger.LogInformation("Latest Submit:{max}", max.ToString());
+                    return 0;
+                }
+                else
+                {
+                    Logger.LogError("Error: no AC submit");
+                    return 1;
+                }
+            }
+
+            var cookieOption = new Option<string>(
+                aliases: new[] { "--cookie", "-c" },
+                description: "cookie header string or textfile.");
+
+            var command = new Command("latest", "Get latest submit")
         {
             cookieOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
-            ctx.ExitCode = await Latest(cookie, ctx.GetCancellationToken());
-        });
-        return command;
-    }
-
-    public async Task<ProblemsSubmission?> LatestInternal(string cookie, CancellationToken cancellationToken)
-    {
-        var submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
-        return submits.Latest();
-    }
-
-    Command BuildSubmitFileCommand()
-    {
-        async Task<int> SubmitFile(FileInfo file, string url, string lang, string? cookie, CancellationToken cancellationToken)
-        {
-            if (!file.Exists)
+            command.SetHandler(async (InvocationContext ctx) =>
             {
-                Logger.LogError("Error: file not found");
-                return 1;
-            }
-
-            using var fs = file.OpenRead();
-            var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
-            fs.Position = 0;
-            using var reader = new StreamReader(fs, encoding);
-
-            return await SubmitFileInternal(reader.ReadToEnd(), url, lang, cookie, cancellationToken);
+                var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
+                ctx.ExitCode = await Latest(cookie, ctx.GetCancellationToken());
+            });
+            return command;
         }
 
-        var fileOption = new Option<FileInfo>(
-            aliases: new[] { "--file", "-f" },
-            description: "source file path.")
+        public async Task<ProblemsSubmission?> LatestInternal(string cookie, CancellationToken cancellationToken)
         {
-            IsRequired = true,
-        };
-        var langOption = new Option<string>(
-            aliases: new[] { "--lang", "-l" },
-            description: "language ID")
+            var submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
+            return submits.Latest();
+        }
+
+        Command BuildSubmitFileCommand()
         {
-            IsRequired = true,
-        };
-        var urlOption = new Option<string>(
-            aliases: new[] { "--url", "-u" },
-            description: "target task url")
-        {
-            IsRequired = true,
-        };
+            async Task<int> SubmitFile(FileInfo file, string url, string lang, string? cookie, CancellationToken cancellationToken)
+            {
+                if (!file.Exists)
+                {
+                    Logger.LogError("Error: file not found");
+                    return 1;
+                }
+
+                using var fs = file.OpenRead();
+                var encoding = CharsetDetector.DetectFromStream(fs)?.Detected?.Encoding ?? Encoding.UTF8;
+                fs.Position = 0;
+                using var reader = new StreamReader(fs, encoding);
+
+                return await SubmitFileInternal(reader.ReadToEnd(), url, lang, cookie, cancellationToken);
+            }
+
+            var fileOption = new Option<FileInfo>(
+                aliases: new[] { "--file", "-f" },
+                description: "source file path.")
+            {
+                IsRequired = true,
+            };
+            var langOption = new Option<string>(
+                aliases: new[] { "--lang", "-l" },
+                description: "language ID")
+            {
+                IsRequired = true,
+            };
+            var urlOption = new Option<string>(
+                aliases: new[] { "--url", "-u" },
+                description: "target task url")
+            {
+                IsRequired = true,
+            };
 
 
-        var cookieOption = new Option<string>(
-            aliases: new[] { "--cookie", "-c" },
-            description: "cookie header string or textfile.");
+            var cookieOption = new Option<string>(
+                aliases: new[] { "--cookie", "-c" },
+                description: "cookie header string or textfile.");
 
-        var command = new Command("submitfile", "Submit source from file")
+            var command = new Command("submitfile", "Submit source from file")
         {
             fileOption,
             langOption,
@@ -404,43 +405,19 @@ partial class Program
             cookieOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var file = ctx.ParseResult.GetValueForOption(fileOption)!;
-            var lang = ctx.ParseResult.GetValueForOption(langOption)!;
-            var url = ctx.ParseResult.GetValueForOption(urlOption)!;
-            var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
-            ctx.ExitCode = await SubmitFile(file, url, lang, cookie, ctx.GetCancellationToken());
-        });
-        return command;
-    }
-
-
-    public async Task<int> SubmitFileInternal(string sourceCode, string url, string lang, string? cookie, CancellationToken cancellationToken)
-    {
-        cookie = LoadCookie(cookie);
-        if (cookie == null)
-        {
-            Logger.LogError("Error: no session");
-            return 255;
+            command.SetHandler(async (InvocationContext ctx) =>
+            {
+                var file = ctx.ParseResult.GetValueForOption(fileOption)!;
+                var lang = ctx.ParseResult.GetValueForOption(langOption)!;
+                var url = ctx.ParseResult.GetValueForOption(urlOption)!;
+                var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
+                ctx.ExitCode = await SubmitFile(file, url, lang, cookie, ctx.GetCancellationToken());
+            });
+            return command;
         }
-        try
-        {
-            var source = new SavedSource(0, url, lang, 0, sourceCode);
-            var submitRes = await StreakService.SubmitSource(source, cookie, false, cancellationToken);
-            return 0;
-        }
-        catch (HttpRequestException e)
-        {
-            Logger.LogError(e, "Error: submit error");
-            return 2;
-        }
-    }
 
 
-    Command BuildSubmitCommand()
-    {
-        async Task<int> Submit(SourceOrder order, bool force, int paralell, string? cookie, CancellationToken cancellationToken)
+        public async Task<int> SubmitFileInternal(string sourceCode, string url, string lang, string? cookie, CancellationToken cancellationToken)
         {
             cookie = LoadCookie(cookie);
             if (cookie == null)
@@ -448,22 +425,11 @@ partial class Program
                 Logger.LogError("Error: no session");
                 return 255;
             }
-
-            if (paralell > 0)
-                return await SubmitParallel(order, paralell, cookie, cancellationToken);
-
             try
             {
-                if (await SubmitInternal(order, force, cookie, cancellationToken) is { } latest)
-                {
-                    Logger.LogInformation("Submit: {latest}", latest.ToString());
-                    return 0;
-                }
-                else
-                {
-                    Logger.LogError("Error: not found new source");
-                    return 1;
-                }
+                var source = new SavedSource(0, url, lang, 0, sourceCode);
+                var submitRes = await StreakService.SubmitSource(source, cookie, false, cancellationToken);
+                return 0;
             }
             catch (HttpRequestException e)
             {
@@ -472,25 +438,60 @@ partial class Program
             }
         }
 
-        var orderOption = new Option<SourceOrder>(
-            aliases: new[] { "--order", "-o" },
-            getDefaultValue: () => SourceOrder.None,
-            description: "source order path.");
 
-        var forceOption = new Option<bool>(
-            aliases: new[] { "--force", "-f" },
-            description: "Submit force");
+        Command BuildSubmitCommand()
+        {
+            async Task<int> Submit(SourceOrder order, bool force, int paralell, string? cookie, CancellationToken cancellationToken)
+            {
+                cookie = LoadCookie(cookie);
+                if (cookie == null)
+                {
+                    Logger.LogError("Error: no session");
+                    return 255;
+                }
 
-        var parallelOption = new Option<int>(
-            aliases: new[] { "--parallel", "-p" },
-            getDefaultValue: () => 0,
-            description: "Parallel count. if 0, streak mode");
+                if (paralell > 0)
+                    return await SubmitParallel(order, paralell, cookie, cancellationToken);
 
-        var cookieOption = new Option<string>(
-            aliases: new[] { "--cookie", "-c" },
-            description: "cookie header string or textfile.");
+                try
+                {
+                    if (await SubmitInternal(order, force, cookie, cancellationToken) is { } latest)
+                    {
+                        Logger.LogInformation("Submit: {latest}", latest.ToString());
+                        return 0;
+                    }
+                    else
+                    {
+                        Logger.LogError("Error: not found new source");
+                        return 1;
+                    }
+                }
+                catch (HttpRequestException e)
+                {
+                    Logger.LogError(e, "Error: submit error");
+                    return 2;
+                }
+            }
 
-        var command = new Command("submit", "Submit source")
+            var orderOption = new Option<SourceOrder>(
+                aliases: new[] { "--order", "-o" },
+                getDefaultValue: () => SourceOrder.None,
+                description: "source order path.");
+
+            var forceOption = new Option<bool>(
+                aliases: new[] { "--force", "-f" },
+                description: "Submit force");
+
+            var parallelOption = new Option<int>(
+                aliases: new[] { "--parallel", "-p" },
+                getDefaultValue: () => 0,
+                description: "Parallel count. if 0, streak mode");
+
+            var cookieOption = new Option<string>(
+                aliases: new[] { "--cookie", "-c" },
+                description: "cookie header string or textfile.");
+
+            var command = new Command("submit", "Submit source")
         {
             orderOption,
             forceOption,
@@ -498,105 +499,107 @@ partial class Program
             cookieOption,
         };
 
-        command.SetHandler(async (InvocationContext ctx) =>
-        {
-            var order = ctx.ParseResult.GetValueForOption(orderOption);
-            var force = ctx.ParseResult.GetValueForOption(forceOption);
-            var parallel = ctx.ParseResult.GetValueForOption(parallelOption);
-            var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
-            ctx.ExitCode = await Submit(order, force, parallel, cookie, ctx.GetCancellationToken());
-        });
-        return command;
-    }
-
-
-    internal async Task<int> SubmitParallel(SourceOrder order, int paralell, string cookie, CancellationToken cancellationToken)
-    {
-        var res = await SubmitInternalParallel(order, cookie, paralell, cancellationToken);
-        foreach (var (source, submitSuccess) in res)
-        {
-            if (submitSuccess)
+            command.SetHandler(async (InvocationContext ctx) =>
             {
-                Logger.LogInformation("Submit: {Url}", source.TaskUrl);
-            }
-            else
-            {
-                Logger.LogError("Failed to submit: {Url}", source.TaskUrl);
-            }
-        }
-        return 0;
-    }
-
-
-    internal static bool IsToday(DateTime dateTime)
-        => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified), TimeSpan.FromHours(9)).Date >= DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date;
-
-    internal async Task<(string contest, string problem, DateTime time)?>
-        SubmitInternal(SourceOrder order, bool force, string cookie, CancellationToken cancellationToken)
-    {
-        ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
-        if (!force)
-        {
-            submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
-            var latest = submits.Latest();
-            if (latest != null && IsToday(latest.DateTime))
-                return (latest.ContestId!, latest.ProblemId!, latest.DateTime);
+                var order = ctx.ParseResult.GetValueForOption(orderOption);
+                var force = ctx.ParseResult.GetValueForOption(forceOption);
+                var parallel = ctx.ParseResult.GetValueForOption(parallelOption);
+                var cookie = ctx.ParseResult.GetValueForOption(cookieOption);
+                ctx.ExitCode = await Submit(order, force, parallel, cookie, ctx.GetCancellationToken());
+            });
+            return command;
         }
 
-        var accepted = new HashSet<(string contest, string problem)>(submits.Select(s => (s.ContestId!, s.ProblemId!)));
-        (string contest, string problem, DateTime time)? submitRes = null;
-        var usedIds = new List<int>();
-        foreach (var source in DataService.GetSources(order))
-        {
 
-            if (source.CanParse())
+        internal async Task<int> SubmitParallel(SourceOrder order, int paralell, string cookie, CancellationToken cancellationToken)
+        {
+            var res = await SubmitInternalParallel(order, cookie, paralell, cancellationToken);
+            foreach (var (source, submitSuccess) in res)
             {
-                var (contest, problem, _) = source.SubmitInfo();
-                if (!accepted.Contains((contest, problem)))
-                    submitRes = await StreakService.SubmitSource(source, cookie, true, cancellationToken);
+                if (submitSuccess)
+                {
+                    Logger.LogInformation("Submit: {Url}", source.TaskUrl);
+                }
+                else
+                {
+                    Logger.LogError("Failed to submit: {Url}", source.TaskUrl);
+                }
             }
-            usedIds.Add(source.Id);
-            if (submitRes.HasValue && submitRes.Value.time >= DateTime.SpecifyKind(DateTime.UtcNow.AddHours(9).Date, DateTimeKind.Unspecified))
-                break;
+            return 0;
         }
 
-        DataService.DeleteSources(usedIds);
-        return submitRes;
-    }
 
-    internal async Task<(SavedSource source, bool submitSuccess)[]>
-        SubmitInternalParallel(SourceOrder order, string cookie, int paralellNum, CancellationToken cancellationToken)
-    {
-        ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
-        var tasks = new List<(SavedSource source, Task<(string contest, string problem, DateTime time)?> submitTask)>();
-        foreach (var source in DataService.GetSources(order))
+        internal static bool IsToday(DateTime dateTime)
+            => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Unspecified), TimeSpan.FromHours(9)).Date >= DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(9)).Date;
+
+        internal async Task<(string contest, string problem, DateTime time)?>
+            SubmitInternal(SourceOrder order, bool force, string cookie, CancellationToken cancellationToken)
         {
-            if (source.CanParse())
+            ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
+            if (!force)
             {
-                if (--paralellNum < 0)
-                    break;
-                tasks.Add((source, StreakService.SubmitSource(source, cookie, false, cancellationToken)));
+                submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
+                var latest = submits.Latest();
+                if (latest != null && IsToday(latest.DateTime))
+                    return (latest.ContestId!, latest.ProblemId!, latest.DateTime);
             }
-        }
-        await Task.WhenAll(tasks.Select(t => t.submitTask));
 
-        var usedIds = new List<int>();
-        var res = new List<(SavedSource source, bool submitSuccess)>();
-        foreach (var (source, task) in tasks)
-        {
-            if (task.IsCompletedSuccessfully)
+            var accepted = new HashSet<(string contest, string problem)>(submits.Select(s => (s.ContestId!, s.ProblemId!)));
+            (string contest, string problem, DateTime time)? submitRes = null;
+            var usedIds = new List<int>();
+            foreach (var source in DataService.GetSources(order))
             {
+
+                if (source.CanParse())
+                {
+                    var (contest, problem, _) = source.SubmitInfo();
+                    if (!accepted.Contains((contest, problem)))
+                        submitRes = await StreakService.SubmitSource(source, cookie, true, cancellationToken);
+                }
                 usedIds.Add(source.Id);
-                res.Add((source, true));
+                if (submitRes.HasValue && submitRes.Value.time >= DateTime.SpecifyKind(DateTime.UtcNow.AddHours(9).Date, DateTimeKind.Unspecified))
+                    break;
             }
-            else
-            {
-                res.Add((source, false));
-            }
+
+            DataService.DeleteSources(usedIds);
+            return submitRes;
         }
 
-        DataService.DeleteSources(usedIds);
-        return res.ToArray();
+        internal async Task<(SavedSource source, bool submitSuccess)[]>
+            SubmitInternalParallel(SourceOrder order, string cookie, int paralellNum, CancellationToken cancellationToken)
+        {
+            ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
+            var tasks = new List<(SavedSource source, Task<(string contest, string problem, DateTime time)?> submitTask)>();
+            foreach (var source in DataService.GetSources(order))
+            {
+                if (source.CanParse())
+                {
+                    if (--paralellNum < 0)
+                        break;
+                    tasks.Add((source, StreakService.SubmitSource(source, cookie, false, cancellationToken)));
+                }
+            }
+            await Task.WhenAll(tasks.Select(t => t.submitTask));
+
+            var usedIds = new List<int>();
+            var res = new List<(SavedSource source, bool submitSuccess)>();
+            foreach (var (source, task) in tasks)
+            {
+                if (task.IsCompletedSuccessfully)
+                {
+                    usedIds.Add(source.Id);
+                    res.Add((source, true));
+                }
+                else
+                {
+                    res.Add((source, false));
+                }
+            }
+
+            DataService.DeleteSources(usedIds);
+            return res.ToArray();
+        }
+
     }
 
 }
