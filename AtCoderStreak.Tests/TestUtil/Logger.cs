@@ -1,14 +1,13 @@
-﻿using ConsoleAppFramework;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 
 namespace AtCoderStreak.TestUtil
 {
-    public class Logger : ILogger<ConsoleApp>, ILogger
+    public class Logger : ILogger
     {
-        private readonly List<(LogLevel level, string msg, EventId eventId, Exception exception)> list = new List<(LogLevel level, string msg, EventId eventId, Exception exception)>();
+        private readonly List<(LogLevel level, string msg, EventId eventId, Exception exception)> list = new();
         public ReadOnlyCollection<(LogLevel level, string msg, EventId eventId, Exception exception)> Logs { get; }
 
         public Logger()

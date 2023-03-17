@@ -7,13 +7,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AtCoderStreak
 {
     public class SubmitTests
     {
-        readonly ProgramBuilder pb = new();
+        readonly MockProgram pb = new();
 
         public static readonly TheoryData TestIsToday_Data
             = new TheoryData<bool, DateTime>
@@ -40,7 +41,7 @@ namespace AtCoderStreak
         }
 
         [Fact]
-        public async void TestSubmit_Latest_Exist()
+        public async Task TestSubmit_Latest_Exist()
         {
             var todays = new ProblemsSubmission
             {
@@ -86,13 +87,13 @@ namespace AtCoderStreak
                 },
                 todays,
                 });
-            var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "");
+            var ret = await pb.SubmitInternal(SourceOrder.None, false, "", default);
             ret.Should().Be((todays.ContestId, todays.ProblemId, todays.DateTime));
         }
 
 
         [Fact]
-        public async void TestSubmit_Old_EmptyDB()
+        public async Task TestSubmit_Old_EmptyDB()
         {
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -110,14 +111,14 @@ namespace AtCoderStreak
                     Result="AC",
                     DateTime=new DateTime(1000,1,1,11,4,13,0),
                 }});
-            var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "dumcookie");
+            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
             pb.StreakMock.Verify(s => s.GetACSubmissionsAsync("dumcookie", It.IsAny<CancellationToken>()), Times.Once());
 
             ret.Should().BeNull();
         }
 
         [Fact]
-        public async void TestSubmit_Force_EmptyDB()
+        public async Task TestSubmit_Force_EmptyDB()
         {
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -135,26 +136,26 @@ namespace AtCoderStreak
                     Result="AC",
                     DateTime=new DateTime(1000,1,1,11,4,13,0),
                 }});
-            var ret = await pb.Build().SubmitInternal(SourceOrder.None, true, "dumcookie");
+            var ret = await pb.SubmitInternal(SourceOrder.None, true, "dumcookie", default);
             pb.StreakMock.Verify(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never());
 
             ret.Should().BeNull();
         }
 
         [Fact]
-        public async void TestSubmit_Verify_Order()
+        public async Task TestSubmit_Verify_Order()
         {
-            await pb.Build().SubmitInternal(SourceOrder.None, true, "dumcookie");
+            await pb.SubmitInternal(SourceOrder.None, true, "dumcookie", default);
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.None), Times.Once());
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.Reverse), Times.Never());
 
-            await pb.Build().SubmitInternal(SourceOrder.Reverse, true, "dumcookie");
+            await pb.SubmitInternal(SourceOrder.Reverse, true, "dumcookie", default);
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.None), Times.Once());
             pb.DataMock.Verify(d => d.GetSources(SourceOrder.Reverse), Times.Once());
         }
 
         [Fact]
-        public async void TestSubmit_All_Submitted()
+        public async Task TestSubmit_All_Submitted()
         {
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -198,7 +199,7 @@ namespace AtCoderStreak
                     new SavedSource(2,"http://example.com/contests/ex2/tasks/ex2_2", "2020", 0, @"echo 2"),
                     new SavedSource(3,"http://example.com/contests/ex3/tasks/ex3_2", "3030", 2, @"echo 3"),
                 });
-            var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "dumcookie");
+            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
             ret.Should().Be(null);
 
 
@@ -211,7 +212,7 @@ namespace AtCoderStreak
         }
 
         [Fact]
-        public async void TestSubmit_Success()
+        public async Task TestSubmit_Success()
         {
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync("dumcookie", It.IsAny<CancellationToken>()))
@@ -247,7 +248,7 @@ namespace AtCoderStreak
                 .Setup(s => s.SubmitSource(It.Is<SavedSource>(ss => ss.Id == 3), It.IsAny<string>(), true, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(("ex3", "ex3_2", new DateTime(2020, 3, 2, 4, 5, 0)));
 
-            var ret = await pb.Build().SubmitInternal(SourceOrder.None, false, "dumcookie");
+            var ret = await pb.SubmitInternal(SourceOrder.None, false, "dumcookie", default);
             ret.Should().Be(("ex3", "ex3_2", new DateTime(2020, 3, 2, 4, 5, 0)));
 
             pb.DataMock

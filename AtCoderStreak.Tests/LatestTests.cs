@@ -11,31 +11,29 @@ namespace AtCoderStreak
 {
     public class LatestTests
     {
-        readonly ProgramBuilder pb = new ProgramBuilder();
+        readonly MockProgram pb = new();
 
         [Fact]
-        public async void TestLatest_NoCookie()
+        public async Task TestLatest_NoCookie()
         {
-            var p = pb.Build();
-            var ret = await p.Latest();
+            var ret = await pb.RunCommand("latest");
             ret.Should().Be(255);
         }
 
         [Fact]
-        public async void TestLatest_NoSubmit()
+        public async Task TestLatest_NoSubmit()
         {
             pb.SetupCookie();
             pb.StreakMock
                 .Setup(s => s.GetACSubmissionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Array.Empty<ProblemsSubmission>());
 
-            var p = pb.Build();
-            (await p.LatestInternal("")).Should().BeNull();
-            (await p.Latest()).Should().Be(1);
+            (await pb.LatestInternal("", default)).Should().BeNull();
+            (await pb.RunCommand("latest")).Should().Be(1);
         }
 
         [Fact]
-        public async void TestLatest_Success()
+        public async Task TestLatest_Success()
         {
             pb.SetupCookie();
             pb.StreakMock
@@ -68,8 +66,7 @@ namespace AtCoderStreak
                     DateTime=new DateTime(2020,1,1,15,4,13,0),
                 },
                 });
-            var p = pb.Build();
-            var ret = await p.LatestInternal("");
+            var ret = await pb.LatestInternal("", default);
             ret!.DateTime.Kind.Should().Be(DateTimeKind.Unspecified);
             ret.Should()
                 .Be(new ProblemsSubmission
@@ -85,7 +82,7 @@ namespace AtCoderStreak
                     Result = "AC",
                     DateTime = new DateTime(2020, 1, 1, 15, 4, 13, 0),
                 });
-            (await p.Latest()).Should().Be(0);
+            (await pb.RunCommand("latest")).Should().Be(0);
         }
     }
 }

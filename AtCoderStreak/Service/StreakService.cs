@@ -84,8 +84,8 @@ namespace AtCoderStreak.Service
                 throw new HttpRequestException($"failed: {uri}");
             using var jsonStream = await res.Content.ReadAsStreamAsync(cancellationToken);
 
-            var submissions = await parser.DeserializeProblemsSubmitAsync(jsonStream, cancellationToken);
-            if (submissions is null) throw new InvalidDataException();
+            var submissions = await parser.DeserializeProblemsSubmitAsync(jsonStream, cancellationToken)
+                ?? throw new InvalidDataException();
             return submissions;
         }
 
@@ -132,7 +132,6 @@ namespace AtCoderStreak.Service
             NameValueCollection query;
             req = new HttpRequestMessage(HttpMethod.Post, baseUrl + "/submit");
             req.Headers.Add("Cookie", cookie);
-#pragma warning disable CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
             req.Content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 {"data.TaskScreenName", problem },
@@ -140,7 +139,6 @@ namespace AtCoderStreak.Service
                 {"sourceCode", source.SourceCode},
                 {"csrf_token", csrfToken},
             });
-#pragma warning restore CS8620 // 参照型の NULL 値の許容の違いにより、パラメーターに引数を使用できません。
 
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
