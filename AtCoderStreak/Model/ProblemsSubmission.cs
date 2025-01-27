@@ -53,7 +53,7 @@ namespace AtCoderStreak.Model
 
         public override int GetHashCode()
         {
-            HashCode hash = new HashCode();
+            var hash = new HashCode();
             hash.Add(this.Id);
             hash.Add(this.DateTime);
             hash.Add(this.ProblemId);

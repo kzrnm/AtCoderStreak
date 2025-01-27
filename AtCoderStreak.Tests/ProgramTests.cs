@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Xunit;
 
 namespace AtCoderStreak
@@ -9,7 +8,7 @@ namespace AtCoderStreak
         [Fact]
         public async Task TestAdd_Failed()
         {
-            Program.GetDefault().Should().NotBeNull();
+            Program.GetDefault().ShouldNotBeNull();
         }
     }
 }

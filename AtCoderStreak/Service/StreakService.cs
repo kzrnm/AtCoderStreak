@@ -19,14 +19,9 @@ namespace AtCoderStreak.Service
 
         Task<(string contest, string problem, DateTime time)?> SubmitSource(SavedSource source, string cookie, bool waitResult, CancellationToken cancellationToken = default);
     }
-    public class StreakService : IStreakService
+    public class StreakService(IHttpClientFactory clientFactory) : IStreakService
     {
         private readonly AtCoderParser parser = new();
-        private readonly IHttpClientFactory clientFactory;
-        public StreakService(IHttpClientFactory clientFactory)
-        {
-            this.clientFactory = clientFactory;
-        }
 
 
         #region Login
@@ -50,7 +45,7 @@ namespace AtCoderStreak.Service
 
             if (res.Headers?.Location?.OriginalString is string to && !to.StartsWith("/login"))
             {
-                var cookieHeaders = res.Headers.FirstOrDefault(p => p.Key.ToLowerInvariant() == "set-cookie");
+                var cookieHeaders = res.Headers.FirstOrDefault(p => p.Key.Equals("set-cookie", StringComparison.InvariantCultureIgnoreCase));
                 if (cookieHeaders.Key != null)
                 {
                     return parser.FilterREVEL_SESSION(cookieHeaders.Value.SelectMany(c => c.Split(';')));

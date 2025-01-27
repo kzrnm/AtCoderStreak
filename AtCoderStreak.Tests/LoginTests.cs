@@ -1,5 +1,4 @@
 using AtCoderStreak.TestUtil;
-using FluentAssertions;
 using Moq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +14,7 @@ namespace AtCoderStreak
         {
             var ret = await pb.RunCommand("login", "dummypass");
             pb.DataMock.Verify(d => d.SaveSession(It.IsAny<string>()), Times.Never());
-            ret.Should().Be(1);
+            ret.ShouldBe(1);
         }
 
         [Fact]
@@ -26,9 +25,9 @@ namespace AtCoderStreak
                 .Setup(s => s.LoginAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(cookie);
 
-            var ret = await pb.LoginInternal("dummyuser", "dummypass", default);
+            var ret = await pb.LoginInternal("dummyuser", "dummypass", TestContext.Current.CancellationToken);
             pb.DataMock.Verify(d => d.SaveSession(cookie), Times.Once());
-            ret.Should().Be(0);
+            ret.ShouldBe(0);
         }
     }
 }

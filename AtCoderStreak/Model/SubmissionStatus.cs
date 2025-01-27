@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace AtCoderStreak.Model
 {
-    public class SubmissionStatus
+    public class SubmissionStatus : IEquatable<SubmissionStatus>
     {
         [JsonPropertyName("Html")]
         public string? Html { set; get; }

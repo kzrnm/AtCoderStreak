@@ -84,15 +84,14 @@ namespace AtCoderStreak
             DataService = dataService;
             StreakService = streakService;
             Logger = logger;
-            RootCommand = new RootCommand()
-        {
-            BuildLoginCommand(),
-            BuildAddCommand(),
-            BuildRestoreCommand(),
-            BuildLatestCommand(),
-            BuildSubmitFileCommand(),
-            BuildSubmitCommand(),
-        };
+            RootCommand = [
+                BuildLoginCommand(),
+                BuildAddCommand(),
+                BuildRestoreCommand(),
+                BuildLatestCommand(),
+                BuildSubmitFileCommand(),
+                BuildSubmitCommand(),
+            ];
         }
 
         public async Task<int> RunCommand(params string[] args)
@@ -142,7 +141,7 @@ namespace AtCoderStreak
 
 
             var userOption = new Option<string?>(
-                aliases: new[] { "--user", "-u" },
+                aliases: ["--user", "-u"],
                 description: "Specify AtCoder user name.");
             var command = new Command("login", "Save atcoder cookie")
         {
@@ -174,26 +173,26 @@ namespace AtCoderStreak
         Command BuildAddCommand()
         {
             var fileOption = new Option<FileInfo>(
-                aliases: new[] { "--file", "-f" },
+                aliases: ["--file", "-f"],
                 description: "source file path.")
             {
                 IsRequired = true,
             };
             var langOption = new Option<string>(
-                aliases: new[] { "--lang", "-l" },
+                aliases: ["--lang", "-l"],
                 description: "language ID")
             {
                 IsRequired = true,
             };
             var urlOption = new Option<string>(
-                aliases: new[] { "--url", "-u" },
+                aliases: ["--url", "-u"],
                 description: "target task url")
             {
                 IsRequired = true,
             };
 
             var priorityOption = new Option<int>(
-                aliases: new[] { "--priority", "-p" },
+                aliases: ["--priority", "-p"],
                 getDefaultValue: () => 0);
 
             var command = new Command("add", "Add source code")
@@ -274,11 +273,11 @@ namespace AtCoderStreak
             }
 
             var idArgument = new Argument<int>("id", getDefaultValue: () => -1, description: "Source id");
-            var fileOption = new Option<FileInfo>(aliases: new[] { "--file", "-f" }, description: "source file path.")
+            var fileOption = new Option<FileInfo>(aliases: ["--file", "-f"], description: "source file path.")
             {
                 IsRequired = true,
             };
-            var urlOption = new Option<string>(aliases: new[] { "--url", "-u" }, description: "target task url");
+            var urlOption = new Option<string>(aliases: ["--url", "-u"], description: "target task url");
 
             var command = new Command("restore", "Restore source code")
         {
@@ -335,7 +334,7 @@ namespace AtCoderStreak
             }
 
             var cookieOption = new Option<string>(
-                aliases: new[] { "--cookie", "-c" },
+                aliases: ["--cookie", "-c"],
                 description: "cookie header string or textfile.");
 
             var command = new Command("latest", "Get latest submit")
@@ -376,19 +375,19 @@ namespace AtCoderStreak
             }
 
             var fileOption = new Option<FileInfo>(
-                aliases: new[] { "--file", "-f" },
+                aliases: ["--file", "-f"],
                 description: "source file path.")
             {
                 IsRequired = true,
             };
             var langOption = new Option<string>(
-                aliases: new[] { "--lang", "-l" },
+                aliases: ["--lang", "-l"],
                 description: "language ID")
             {
                 IsRequired = true,
             };
             var urlOption = new Option<string>(
-                aliases: new[] { "--url", "-u" },
+                aliases: ["--url", "-u"],
                 description: "target task url")
             {
                 IsRequired = true,
@@ -396,7 +395,7 @@ namespace AtCoderStreak
 
 
             var cookieOption = new Option<string>(
-                aliases: new[] { "--cookie", "-c" },
+                aliases: ["--cookie", "-c"],
                 description: "cookie header string or textfile.");
 
             var command = new Command("submitfile", "Submit source from file")
@@ -444,21 +443,21 @@ namespace AtCoderStreak
         Command BuildSubmitCommand()
         {
             var orderOption = new Option<SourceOrder>(
-                aliases: new[] { "--order", "-o" },
+                aliases: ["--order", "-o"],
                 getDefaultValue: () => SourceOrder.None,
                 description: "source order path.");
 
             var forceOption = new Option<bool>(
-                aliases: new[] { "--force", "-f" },
+                aliases: ["--force", "-f"],
                 description: "Submit force");
 
             var parallelOption = new Option<int>(
-                aliases: new[] { "--parallel", "-p" },
+                aliases: ["--parallel", "-p"],
                 getDefaultValue: () => 0,
                 description: "Parallel count. if 0, streak mode");
 
             var cookieOption = new Option<string>(
-                aliases: new[] { "--cookie", "-c" },
+                aliases: ["--cookie", "-c"],
                 description: "cookie header string or textfile.");
 
             var command = new Command("submit", "Submit source")
@@ -537,7 +536,7 @@ namespace AtCoderStreak
         internal async Task<(string contest, string problem, DateTime time)?>
             SubmitSingleInternal(SourceOrder order, bool force, string cookie, CancellationToken cancellationToken)
         {
-            ProblemsSubmission[] submits = Array.Empty<ProblemsSubmission>();
+            ProblemsSubmission[] submits = [];
             if (!force)
             {
                 submits = await StreakService.GetACSubmissionsAsync(cookie, cancellationToken);
@@ -599,7 +598,7 @@ namespace AtCoderStreak
             }
 
             DeleteInternal(usedIds);
-            return res.ToArray();
+            return [.. res];
         }
 
         public IEnumerable<SavedSource> GetSources() => DataService.GetSources(SourceOrder.None);

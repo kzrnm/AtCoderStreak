@@ -1,5 +1,4 @@
 ﻿using AtCoderStreak.Model;
-using FluentAssertions;
 using System;
 using Xunit;
 
@@ -10,7 +9,7 @@ namespace AtCoderStreak.Service
         [Fact]
         public void TestFilterAC()
         {
-            StreakService.FilterAC(new ProblemsSubmission[] {
+            StreakService.FilterAC([
                 new ProblemsSubmission
                 {
                     Id=7141771,
@@ -102,35 +101,34 @@ namespace AtCoderStreak.Service
                     Result="CE",
                     ExecutionTime=null,
                 },
-                }).Should()
-                .Equal(new ProblemsSubmission[2] {
-                new ProblemsSubmission
-                {
-                    Id=7141771,
-                    ContestId="jsc2019-qual",
-                    ProblemId="jsc2019_qual_a",
-                    DateTime=new DateTime(2019,08,26,00,48,38),
-                    UserId="naminodarie",
-                    Length=3059,
-                    Language="C# (Mono 4.6.2.0)",
-                    Point=200,
-                    Result="AC",
-                    ExecutionTime=25,
-                },
-                new ProblemsSubmission
-                {
-                    Id=10324362,
-                    ContestId="abc023",
-                    ProblemId="abc023_d",
-                    DateTime=new DateTime(2020,02,24,16,59,12),
-                    UserId="naminodarie",
-                    Length=9964,
-                    Language="C# (Mono 4.6.2.0)",
-                    Point=100,
-                    Result="AC",
-                    ExecutionTime=253,
-                },
-                });
+                ]).ShouldBe([
+                    new ProblemsSubmission
+                    {
+                        Id=7141771,
+                        ContestId="jsc2019-qual",
+                        ProblemId="jsc2019_qual_a",
+                        DateTime=new DateTime(2019,08,26,00,48,38),
+                        UserId="naminodarie",
+                        Length=3059,
+                        Language="C# (Mono 4.6.2.0)",
+                        Point=200,
+                        Result="AC",
+                        ExecutionTime=25,
+                    },
+                    new ProblemsSubmission
+                    {
+                        Id=10324362,
+                        ContestId="abc023",
+                        ProblemId="abc023_d",
+                        DateTime=new DateTime(2020,02,24,16,59,12),
+                        UserId="naminodarie",
+                        Length=9964,
+                        Language="C# (Mono 4.6.2.0)",
+                        Point=100,
+                        Result="AC",
+                        ExecutionTime=253,
+                    },
+                ]);
         }
     }
 }

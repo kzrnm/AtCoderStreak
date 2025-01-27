@@ -1,7 +1,6 @@
 using AtCoderStreak.Model;
 using AtCoderStreak.Model.Entities;
 using AtCoderStreak.TestUtil;
-using FluentAssertions;
 using Moq;
 using System.IO;
 using System.Text;
@@ -19,7 +18,7 @@ namespace AtCoderStreak
             var file = Path.GetTempFileName();
             File.Delete(file);
             var ret = await pb.RunCommand("add", "-u", "http://example.com", "-l", "1001", "-f", file);
-            ret.Should().Be(1);
+            ret.ShouldBe(1);
             pb.DataMock.Verify(d => d.SaveSource(It.IsAny<Source>()), Times.Never());
         }
 
@@ -32,7 +31,7 @@ namespace AtCoderStreak
 
             var p = new SavedSource(0, "http://example.com", "1001", 0, source);
             var ret = await pb.RunCommand("add", "-u", "http://example.com", "-l", "1001", "-f", file.Path);
-            ret.Should().Be(0);
+            ret.ShouldBe(0);
             pb.DataMock.Verify(d => d.SaveSource(It.Is<Source>(
                 s => s.ToImmutable() == new SavedSource(0, "http://example.com", "1001", 0, source))));
         }
@@ -48,7 +47,7 @@ namespace AtCoderStreak
 
                 var p = new SavedSource(0, "http://example.com", "1001", 0, source);
                 var ret = await pb.RunCommand("add", "-u", "http://example.com", "-l", "1001", "-f", file, "-p", "123");
-                ret.Should().Be(0);
+                ret.ShouldBe(0);
                 pb.DataMock.Verify(d => d.SaveSource(It.Is<Source>(
                     s => s.ToImmutable() == new SavedSource(0, "http://example.com", "1001", 123, source))));
             }
@@ -69,7 +68,7 @@ namespace AtCoderStreak
 
                 var p = new SavedSource(0, "http://example.com", "1001", 0, source);
                 var ret = await pb.RunCommand("add", "--url", "http://example.com", "--lang", "1001", "--file", file, "--priority", "123");
-                ret.Should().Be(0);
+                ret.ShouldBe(0);
                 pb.DataMock.Verify(d => d.SaveSource(It.Is<Source>(
                     s => s.ToImmutable() == new SavedSource(0, "http://example.com", "1001", 123, source))));
             }

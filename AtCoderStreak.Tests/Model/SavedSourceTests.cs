@@ -1,39 +1,36 @@
-﻿using FluentAssertions;
-using System;
+﻿using System;
 using Xunit;
+using Xunit.Sdk;
 
 namespace AtCoderStreak.Model
 {
     public class SavedSourceTests
     {
-        public static readonly TheoryData SourceTestSubmitInfo
-            = new TheoryData<(string, string, string)?, SavedSource> {
+        public static TheoryData<string, string, string, SerializableSavedSource> SourceTestSubmitInfo => new() {
             {
-                ("abc169", "abc169_a", "https://atcoder.jp/contests/abc169"),
-                new SavedSource(1, "https://atcoder.jp/contests/abc169/tasks/abc169_a", "4009", 0, @"{print $1 * $2}")
+                "abc169", "abc169_a", "https://atcoder.jp/contests/abc169",
+                new SerializableSavedSource(1, "https://atcoder.jp/contests/abc169/tasks/abc169_a", "4009", 0, @"{print $1 * $2}")
             },
             {
-                null,
-                new SavedSource(1, "https://atcoder.jp/contests/abc169/", "4009", 0, @"{print $1 * $2}")
+                null, null, null,
+                new SerializableSavedSource(1, "https://atcoder.jp/contests/abc169/", "4009", 0, @"{print $1 * $2}")
             },
         };
         [Theory]
         [MemberData(nameof(SourceTestSubmitInfo))]
-        public void TestSubmitInfo(
-            (string contest, string problem, string submitUrl)? expected, SavedSource source)
+        public void TestSubmitInfo(string expectedContest, string expectedProblem, string expectedSubmitUrl, SerializableSavedSource ssource)
         {
-            if (expected is { } ex)
+            var source = ssource.ToSavedSource();
+            if (expectedContest != null)
             {
-                source.CanParse().Should().BeTrue();
-                source.SubmitInfo().Should().Be(ex);
+                source.CanParse().ShouldBeTrue();
+                source.SubmitInfo().ShouldBe((expectedContest, expectedProblem, expectedSubmitUrl));
             }
             else
             {
-                source.CanParse().Should().BeFalse();
-                source.Invoking(s => s.SubmitInfo())
-                    .Should()
-                    .Throw<InvalidOperationException>()
-                    .WithMessage("failed to parse TaskUrl");
+                source.CanParse().ShouldBeFalse();
+                Should.Throw<InvalidOperationException>(() => source.SubmitInfo())
+                    .Message.ShouldBe("failed to parse TaskUrl");
             }
         }
     }
