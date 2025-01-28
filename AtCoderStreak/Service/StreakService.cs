@@ -142,7 +142,13 @@ namespace AtCoderStreak.Service
 
             res = await client.SendAsync(req, cancellationToken);
             if (!res.IsSuccessStatusCode)
-                throw new HttpRequestException($"failed: {req}");
+            {
+                Console.Error.WriteLine("Request");
+                Console.Error.WriteLine(req);
+                Console.Error.WriteLine("Response");
+                Console.Error.WriteLine(res);
+                throw new HttpRequestException($"failed");
+            }
             var resContent = await res.Content.ReadAsStringAsync(cancellationToken);
             if (resContent.Contains("href=\"/reset_password\""))
                 throw new HttpRequestException($"Require login: {req}");
