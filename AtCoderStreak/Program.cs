@@ -597,11 +597,13 @@ namespace AtCoderStreak
                 }
             }
 
+            BackupInternal();
             DeleteInternal(usedIds);
             return [.. res];
         }
 
         public IEnumerable<SavedSource> GetSources() => DataService.GetSources(SourceOrder.None);
         public void DeleteInternal(IEnumerable<int> ids) => DataService.DeleteSources(ids);
+        public void BackupInternal() => DataService.Backup();
     }
 }

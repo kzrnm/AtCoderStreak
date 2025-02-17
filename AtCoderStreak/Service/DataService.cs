@@ -4,6 +4,7 @@ using LiteDB;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 
 namespace AtCoderStreak.Service
@@ -15,6 +16,7 @@ namespace AtCoderStreak.Service
         SavedSource[] GetSourcesByUrl(string url);
         SavedSource[] GetSources(SourceOrder order);
         void DeleteSources(IEnumerable<int> ids);
+        void Backup();
 
         void SaveSession(string cookie);
         string? GetSession();
@@ -104,6 +106,10 @@ namespace AtCoderStreak.Service
                 col.Delete(new BsonValue(id));
             }
             db.Commit();
+        }
+        public void Backup()
+        {
+            File.Copy(ConnectionString.Filename, ConnectionString.Filename + ".prev", true);
         }
     }
 
